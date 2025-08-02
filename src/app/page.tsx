@@ -1,103 +1,162 @@
-import Image from "next/image";
+"use client";
+
+import React, { useRef, useState } from "react";
+import styled from "styled-components";
+import { useUpload } from "@/hooks/useUpload";
+import GalleryPreview from "@/components/GalleryPreview";
+
+const Container = styled.div`
+  width: 100%;
+  height: 100vh;
+  margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+`;
+
+const ContentWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 32vh;
+  width: 100%;
+  max-width: 350px;
+`;
+
+const UploadSection = styled.div`
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 1rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.9);
+    transform: translateY(-2px);
+  }
+`;
+
+const Title = styled.h2`
+  color: #8b4513;
+  font-size: 1.2rem;
+  margin: 0;
+  text-align: center;
+`;
+
+const Subtitle = styled.p`
+  color: #a0522d;
+  font-size: 0.85rem;
+  margin: 0;
+  text-align: center;
+`;
+
+const IconText = styled.div`
+  color: #a0522d;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+`;
+
+const UploadIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  color: #8b4513;
+  margin-bottom: 0.4rem;
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+`;
+
+const FileInput = styled.input`
+  display: none;
+`;
+
+const ProgressBar = styled.div<{ $progress: number }>`
+  width: 100%;
+  height: 4px;
+  background: rgba(139, 69, 19, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 0.4rem;
+
+  &::after {
+    content: "";
+    display: block;
+    width: ${(props) => props.$progress}%;
+    height: 100%;
+    background: #8b4513;
+    transition: width 0.3s ease;
+  }
+`;
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [key, setKey] = useState(0);
+  const { uploadFiles, isUploading, progress, error } = useUpload();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      await uploadFiles(event.target.files);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      setKey((prev) => prev + 1);
+    } catch (error) {
+      console.error("Upload failed:", error);
+    }
+  };
+
+  const handleClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  return (
+    <div className="page-container" id="home-page">
+      <Container>
+        <ContentWrapper>
+          <UploadSection onClick={handleClick}>
+            <FileInput
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              onChange={handleUpload}
+              disabled={isUploading}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+            <UploadIcon>
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z" />
+              </svg>
+            </UploadIcon>
+            <Title>שתפו את הזכרונות שלכם</Title>
+            <Subtitle>העלו תמונות וסרטונים מהיום המיוחד שלנו</Subtitle>
+            <IconText>
+              <span>📸</span>
+              תמונות וסרטונים מוזמנים
+              <span>❤️</span>
+            </IconText>
+            {isUploading && <ProgressBar $progress={progress} />}
+            {error && (
+              <div style={{ color: "red", marginTop: "0.5rem" }}>{error}</div>
+            )}
+          </UploadSection>
+
+          <GalleryPreview key={key} />
+        </ContentWrapper>
+      </Container>
     </div>
   );
 }

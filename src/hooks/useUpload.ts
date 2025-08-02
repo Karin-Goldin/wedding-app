@@ -1,0 +1,126 @@
+"use client";
+
+import { useState } from "react";
+import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
+
+// Define allowed file types
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/heic",
+];
+
+const ALLOWED_VIDEO_TYPES = [
+  "video/mp4",
+  "video/quicktime", // .mov files
+  "video/webm",
+];
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
+export const useUpload = () => {
+  const [isUploading, setIsUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  const validateFile = (file: File) => {
+    if (
+      !ALLOWED_IMAGE_TYPES.includes(file.type) &&
+      !ALLOWED_VIDEO_TYPES.includes(file.type)
+    ) {
+      throw new Error(
+        `סוג קובץ לא נתמך. הקבצים הנתמכים הם: JPEG, PNG, GIF, WEBP, HEIC, MP4, MOV, WEBM`
+      );
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      throw new Error("הקובץ גדול מדי. הגודל המקסימלי הוא 50MB");
+    }
+  };
+
+  const uploadFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) {
+      setError("לא נבחרו קבצים");
+      return [];
+    }
+
+    setIsUploading(true);
+    setProgress(0);
+    setError(null);
+
+    try {
+      const urls = [];
+      let completed = 0;
+
+      for (const file of Array.from(files)) {
+        try {
+          // Validate file before upload
+          validateFile(file);
+
+          // Create unique file name
+          const timestamp = Date.now();
+          const fileExt = file.name.split(".").pop();
+          const fileName = `${timestamp}-${Math.random()
+            .toString(36)
+            .substring(7)}.${fileExt}`;
+
+          // Upload to Supabase Storage
+          const { data, error: uploadError } = await supabase.storage
+            .from(STORAGE_BUCKET)
+            .upload(fileName, file, {
+              cacheControl: "3600",
+              upsert: false,
+            });
+
+          if (uploadError) {
+            throw new Error(uploadError.message);
+          }
+
+          // Get public URL
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
+
+          urls.push(publicUrl);
+
+          // Update progress
+          completed++;
+          setProgress((completed / files.length) * 100);
+        } catch (err) {
+          console.error("Error uploading file:", err);
+          setError(err instanceof Error ? err.message : "שגיאה בהעלאת הקובץ");
+          // Continue with other files
+        }
+      }
+
+      if (urls.length === 0) {
+        setError("לא הצלחנו להעלות אף קובץ");
+      } else if (urls.length < files.length) {
+        setError("חלק מהקבצים לא הועלו בהצלחה");
+      }
+
+      return urls;
+    } catch (err) {
+      console.error("Upload error:", err);
+      setError("שגיאה בהעלאת הקבצים");
+      return [];
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return {
+    uploadFiles,
+    isUploading,
+    progress,
+    error,
+    allowedTypes: {
+      images: ALLOWED_IMAGE_TYPES,
+      videos: ALLOWED_VIDEO_TYPES,
+    },
+    maxFileSize: MAX_FILE_SIZE,
+  };
+};
