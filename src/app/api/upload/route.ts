@@ -12,6 +12,9 @@ const ALLOWED_IMAGE_TYPES = [
   "image/heif",
   "image/heic-sequence",
   "image/heif-sequence",
+  // Android specific
+  "image/x-ms-bmp",
+  "image/bmp",
 ];
 
 const ALLOWED_VIDEO_TYPES = [
@@ -22,6 +25,12 @@ const ALLOWED_VIDEO_TYPES = [
   "video/hevc", // HEVC/H.265
   "video/h265",
   "video/x-h265",
+  // Android specific
+  "video/3gpp", // .3gp
+  "video/x-matroska", // .mkv
+  "video/mpeg", // .mpg, .mpeg
+  "video/ogg", // .ogv
+  "video/x-msvideo", // .avi
 ];
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
