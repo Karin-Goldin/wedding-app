@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { initializeApp, getApps } from "firebase/app";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
@@ -34,26 +37,6 @@ const ALLOWED_VIDEO_TYPES = [
 ];
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-
-const firebaseConfig = {
-  apiKey: "AIzaSyB06yZDc0fF5KNmxkmjB2qmVq5y0NFYwK_4",
-  authDomain: "wedding-app-69c75.firebaseapp.com",
-  projectId: "wedding-app-69c75",
-  storageBucket: "wedding-app-69c75.appspot.com",
-  messagingSenderId: "874337951478",
-  appId: "1:874337951478:web:409abe32a7ee500ec5d6d7",
-};
-
-// Initialize Firebase only if it hasn't been initialized
-const app =
-  getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const storage = getStorage(app);
-
-interface UploadError {
-  code?: string;
-  message: string;
-  serverResponse?: string;
-}
 
 export async function POST(request: Request) {
   console.log("Starting file upload process...");
@@ -99,41 +82,34 @@ export async function POST(request: Request) {
     console.log("Preparing to upload file:", safeFileName, "Type:", file.type);
 
     try {
-      // Create reference
-      const fileRef = ref(storage, `uploads/${safeFileName}`);
-      console.log("Created storage reference");
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from("wedding-photos")
+        .upload(safeFileName, buffer, {
+          contentType: file.type,
+          cacheControl: "3600",
+        });
 
-      // Upload file
-      const metadata = {
-        contentType: file.type,
-        customMetadata: {
-          originalName: filename,
-          uploadedAt: new Date().toISOString(),
-        },
-      };
+      if (error) {
+        console.error("Supabase upload error:", error);
+        return NextResponse.json(
+          { error: "Failed to upload to storage", details: error.message },
+          { status: 500 }
+        );
+      }
 
-      const uploadResult = await uploadBytes(fileRef, buffer, metadata);
-      console.log("File uploaded successfully");
+      // Get public URL
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("wedding-photos").getPublicUrl(safeFileName);
 
-      // Get URL
-      const url = await getDownloadURL(uploadResult.ref);
-      console.log("Got download URL:", url);
+      console.log("Got public URL:", publicUrl);
 
-      return NextResponse.json({ url });
-    } catch (uploadError: unknown) {
-      console.error("Firebase upload error:", uploadError);
-      const error = uploadError as UploadError;
-      console.error("Error details:", {
-        code: error.code,
-        message: error.message,
-        serverResponse: error.serverResponse,
-      });
-
+      return NextResponse.json({ url: publicUrl });
+    } catch (uploadError: any) {
+      console.error("Upload error:", uploadError);
       return NextResponse.json(
-        {
-          error: "Failed to upload to storage",
-          details: error.message,
-        },
+        { error: "Failed to upload to storage", details: uploadError.message },
         { status: 500 }
       );
     }
