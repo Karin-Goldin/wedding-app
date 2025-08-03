@@ -67,28 +67,31 @@ export const useUpload = () => {
             .toString(36)
             .substring(7)}.${fileExt}`;
 
-          // Upload to Supabase Storage
-          const { data, error: uploadError } = await supabase.storage
-            .from(STORAGE_BUCKET)
-            .upload(fileName, file, {
-              cacheControl: "3600",
-              upsert: false,
-            });
+          // Upload to API route
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("fileName", fileName);
 
-          if (uploadError) {
-            throw new Error(uploadError.message);
+          const response = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            console.error("Upload error response:", result);
+            throw new Error(result.details || result.error || "Upload failed");
           }
 
-          // Get public URL
-          const {
-            data: { publicUrl },
-          } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
-
-          urls.push(publicUrl);
-
-          // Update progress
-          completed++;
-          setProgress((completed / files.length) * 100);
+          if (result.url) {
+            urls.push(result.url);
+            // Update progress
+            completed++;
+            setProgress((completed / files.length) * 100);
+          } else {
+            throw new Error("No URL in response");
+          }
         } catch (err) {
           console.error("Error uploading file:", err);
           setError(err instanceof Error ? err.message : "שגיאה בהעלאת הקובץ");

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import styled from "styled-components";
 import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
+import Image from "next/image";
 
 const GalleryContainer = styled.div`
   width: 100%;
@@ -37,15 +38,11 @@ interface GalleryProps {
   onLoad?: (hasFiles: boolean) => void;
 }
 
-export default function Gallery({ onLoad }: GalleryProps) {
+export default function Gallery() {
   const [files, setFiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadFiles();
-  }, []);
-
-  const loadFiles = async () => {
+  const loadFiles = useCallback(async () => {
     try {
       const { data, error } = await supabase.storage
         .from(STORAGE_BUCKET)
@@ -67,13 +64,16 @@ export default function Gallery({ onLoad }: GalleryProps) {
       );
 
       setFiles(urls);
-      onLoad?.(urls.length > 0);
     } catch (error) {
       console.error("Error:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadFiles();
+  }, [loadFiles]);
 
   const isVideo = (url: string) => {
     return /\.(mp4|mov|webm)$/i.test(url);
@@ -89,7 +89,7 @@ export default function Gallery({ onLoad }: GalleryProps) {
 
   return (
     <GalleryContainer>
-      {files.map((url, index) => (
+      {files.map((url) => (
         <ImageCard key={url}>
           {isVideo(url) ? (
             <video controls>
@@ -97,7 +97,13 @@ export default function Gallery({ onLoad }: GalleryProps) {
               Your browser does not support the video tag.
             </video>
           ) : (
-            <img src={url} alt={`תמונה ${index + 1}`} loading="lazy" />
+            <Image
+              src={url}
+              alt="Wedding photo"
+              width={300}
+              height={300}
+              style={{ objectFit: "cover" }}
+            />
           )}
         </ImageCard>
       ))}

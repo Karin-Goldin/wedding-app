@@ -33,6 +33,12 @@ const app =
   getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const storage = getStorage(app);
 
+interface UploadError {
+  code?: string;
+  message: string;
+  serverResponse?: string;
+}
+
 export async function POST(request: Request) {
   console.log("Starting file upload process...");
 
@@ -98,18 +104,19 @@ export async function POST(request: Request) {
       console.log("Got download URL:", url);
 
       return NextResponse.json({ url });
-    } catch (uploadError: any) {
+    } catch (uploadError: unknown) {
       console.error("Firebase upload error:", uploadError);
+      const error = uploadError as UploadError;
       console.error("Error details:", {
-        code: uploadError.code,
-        message: uploadError.message,
-        serverResponse: uploadError.serverResponse,
+        code: error.code,
+        message: error.message,
+        serverResponse: error.serverResponse,
       });
 
       return NextResponse.json(
         {
           error: "Failed to upload to storage",
-          details: uploadError.message,
+          details: error.message,
         },
         { status: 500 }
       );

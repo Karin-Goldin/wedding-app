@@ -155,10 +155,10 @@ export default function GalleryPreview() {
 
   return (
     <PreviewCard onClick={() => router.push("/gallery")}>
-      <Title>הזכרונות שלנו איתכם</Title>
+      <Title>הזכרונות שלנו</Title>
       <Subtitle>{totalFiles} תמונות שותפו עד כה</Subtitle>
       <PreviewGrid>
-        {previewUrls.map((url, index) => (
+        {previewUrls.map((url) => (
           <PreviewImage key={url} $url={url} />
         ))}
       </PreviewGrid>
