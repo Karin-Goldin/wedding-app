@@ -14,34 +14,36 @@ body {
 }
 
 .page-container {
-  width: 100%;
+  width: 100vw;
   min-height: 100vh;
   position: relative;
-  overflow-x: hidden; /* Prevent horizontal scroll */
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 .page-container::before,
 .page-container::after {
   content: "";
   position: fixed;
-  width: 100%;
-  height: 50%;
+  width: 100vw;
+  height: 50vh;
   left: 0;
+  right: 0;
   background-repeat: no-repeat;
+  background-size: 100% auto;
   z-index: -1;
 }
 
 .page-container::before {
   top: 0;
   background-image: url("/bg.svg");
-  background-size: contain;
   background-position: top center;
 }
 
 .page-container::after {
   bottom: 0;
   background-image: url("/bg2.svg");
-  background-size: contain;
   background-position: bottom center;
 }
 

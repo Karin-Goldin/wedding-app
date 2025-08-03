@@ -8,8 +8,8 @@ import GalleryPreview from "@/components/GalleryPreview";
 const Container = styled.div`
   width: 100%;
   height: 100vh;
-  margin: 0 auto;
-  padding: 20px;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -24,6 +24,7 @@ const ContentWrapper = styled.div`
   margin-top: 32vh;
   width: 100%;
   max-width: 350px;
+  padding: 0;
 `;
 
 const UploadSection = styled.div`
