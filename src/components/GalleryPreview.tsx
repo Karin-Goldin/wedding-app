@@ -99,10 +99,6 @@ export default function GalleryPreview() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    loadFiles();
-  }, []);
-
   const loadFiles = async () => {
     try {
       const { data, error } = await supabase.storage
@@ -135,6 +131,33 @@ export default function GalleryPreview() {
     }
   };
 
+  useEffect(() => {
+    loadFiles();
+
+    // Subscribe to storage changes
+    const channel = supabase
+      .channel("storage-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "storage",
+          table: "objects",
+          filter: `bucket_id=eq.${STORAGE_BUCKET}`,
+        },
+        () => {
+          // Reload files when any change occurs
+          loadFiles();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      channel.unsubscribe();
+    };
+  }, []);
+
   if (loading) {
     return null;
   }
@@ -158,7 +181,7 @@ export default function GalleryPreview() {
       <Title>הזכרונות שלנו</Title>
       <Subtitle>{totalFiles} תמונות שותפו עד כה</Subtitle>
       <PreviewGrid>
-        {previewUrls.map((url) => (
+        {previewUrls.map((url, index) => (
           <PreviewImage key={url} $url={url} />
         ))}
       </PreviewGrid>

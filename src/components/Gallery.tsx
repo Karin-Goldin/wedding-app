@@ -75,6 +75,29 @@ export default function Gallery() {
 
   useEffect(() => {
     loadFiles();
+
+    // Subscribe to storage changes
+    const channel = supabase
+      .channel("storage-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "storage",
+          table: "objects",
+          filter: `bucket_id=eq.${STORAGE_BUCKET}`,
+        },
+        () => {
+          // Reload files when any change occurs
+          loadFiles();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      channel.unsubscribe();
+    };
   }, [loadFiles]);
 
   const isVideo = (url: string) => {
