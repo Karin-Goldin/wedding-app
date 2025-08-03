@@ -76,27 +76,28 @@ export default function Gallery() {
   useEffect(() => {
     loadFiles();
 
-    // Subscribe to storage changes
+    // Enable real-time subscription for storage events
     const channel = supabase
       .channel("storage-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "storage",
-          table: "objects",
-          filter: `bucket_id=eq.${STORAGE_BUCKET}`,
-        },
-        () => {
-          // Reload files when any change occurs
-          loadFiles();
+      .on("presence", { event: "sync" }, () => {
+        console.log("Presence sync");
+      })
+      .on("broadcast", { event: "storage-update" }, () => {
+        console.log("Storage update received");
+        loadFiles();
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          console.log("Subscribed to storage changes");
         }
-      )
-      .subscribe();
+      });
 
-    // Cleanup subscription on unmount
+    // Also set up a periodic refresh as a backup
+    const refreshInterval = setInterval(loadFiles, 5000);
+
     return () => {
       channel.unsubscribe();
+      clearInterval(refreshInterval);
     };
   }, [loadFiles]);
 
