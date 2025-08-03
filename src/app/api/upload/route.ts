@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { StorageError } from "@supabase/storage-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -102,19 +103,17 @@ export async function POST(request: Request) {
       }
 
       // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("wedding-photos").getPublicUrl(safeFileName);
+      const { data: urlData } = supabase.storage
+        .from("wedding-photos")
+        .getPublicUrl(safeFileName);
 
-      console.log("Got public URL:", publicUrl);
+      console.log("Got public URL:", urlData.publicUrl);
 
-      return NextResponse.json({ url: publicUrl });
-    } catch (uploadError) {
-      console.error("Upload error:", uploadError);
+      return NextResponse.json({ url: urlData.publicUrl });
+    } catch (error) {
+      console.error("Upload error:", error);
       const errorMessage =
-        uploadError instanceof Error
-          ? uploadError.message
-          : "Unknown error occurred";
+        error instanceof StorageError ? error.message : "Unknown upload error";
       return NextResponse.json(
         { error: "Failed to upload to storage", details: errorMessage },
         { status: 500 }
