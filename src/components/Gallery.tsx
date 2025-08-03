@@ -4,12 +4,15 @@ import { useEffect, useState, useCallback } from "react";
 import styled from "styled-components";
 import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
 import Image from "next/image";
+import MediaModal from "./MediaModal";
 
 const GalleryContainer = styled.div`
   width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
   padding: 20px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   margin-top: 20px;
 `;
@@ -21,6 +24,8 @@ const ImageCard = styled.div`
   overflow: hidden;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s;
+  aspect-ratio: 1;
+  cursor: pointer;
 
   &:hover {
     transform: translateY(-5px);
@@ -29,7 +34,7 @@ const ImageCard = styled.div`
   img,
   video {
     width: 100%;
-    height: 250px;
+    height: 100%;
     object-fit: cover;
   }
 `;
@@ -37,6 +42,7 @@ const ImageCard = styled.div`
 export default function Gallery() {
   const [files, setFiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
 
   const loadFiles = useCallback(async () => {
     try {
@@ -72,7 +78,7 @@ export default function Gallery() {
   }, [loadFiles]);
 
   const isVideo = (url: string) => {
-    return /\.(mp4|mov|webm)$/i.test(url);
+    return /\.(mp4|mov|webm|3gp|mkv|mpeg|ogv|avi)$/i.test(url);
   };
 
   if (loading) {
@@ -84,25 +90,35 @@ export default function Gallery() {
   }
 
   return (
-    <GalleryContainer>
-      {files.map((url) => (
-        <ImageCard key={url}>
-          {isVideo(url) ? (
-            <video controls>
-              <source src={url} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-          ) : (
-            <Image
-              src={url}
-              alt="Wedding photo"
-              width={300}
-              height={300}
-              style={{ objectFit: "cover" }}
-            />
-          )}
-        </ImageCard>
-      ))}
-    </GalleryContainer>
+    <>
+      <GalleryContainer>
+        {files.map((url) => (
+          <ImageCard key={url} onClick={() => setSelectedMedia(url)}>
+            {isVideo(url) ? (
+              <video>
+                <source src={url} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            ) : (
+              <Image
+                src={url}
+                alt="Wedding photo"
+                width={400}
+                height={400}
+                style={{ objectFit: "cover" }}
+              />
+            )}
+          </ImageCard>
+        ))}
+      </GalleryContainer>
+
+      {selectedMedia && (
+        <MediaModal
+          url={selectedMedia}
+          isVideo={isVideo(selectedMedia)}
+          onClose={() => setSelectedMedia(null)}
+        />
+      )}
+    </>
   );
 }
