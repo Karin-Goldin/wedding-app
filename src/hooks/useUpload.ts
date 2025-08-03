@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
 
 // Define allowed file types
 const ALLOWED_IMAGE_TYPES = [
@@ -75,34 +76,35 @@ export const useUpload = () => {
           // Validate file before upload
           validateFile(file);
 
-          // Create form data
-          const formData = new FormData();
-          formData.append("file", file);
+          // Create a unique file name
+          const timestamp = Date.now();
+          const randomString = Math.random().toString(36).substring(7);
+          const fileExt = file.name.split(".").pop();
+          const fileName = `${timestamp}-${randomString}.${fileExt}`;
 
-          const response = await fetch("/api/upload", {
-            method: "POST",
-            body: formData,
-            headers: {
-              // Don't set Content-Type header - browser will set it with boundary
-              Accept: "application/json",
-            },
-          });
+          // Upload directly to Supabase Storage
+          const { error: uploadError, data } = await supabase.storage
+            .from(STORAGE_BUCKET)
+            .upload(fileName, file, {
+              cacheControl: "3600",
+              upsert: false,
+            });
 
-          const result = await response.json();
-
-          if (!response.ok) {
-            console.error("Upload error response:", result);
-            throw new Error(result.details || result.error || "Upload failed");
+          if (uploadError) {
+            console.error("Upload error:", uploadError);
+            throw new Error(uploadError.message);
           }
 
-          if (result.url) {
-            urls.push(result.url);
-            // Update progress
-            completed++;
-            setProgress((completed / files.length) * 100);
-          } else {
-            throw new Error("No URL in response");
-          }
+          // Get the public URL
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
+
+          urls.push(publicUrl);
+
+          // Update progress
+          completed++;
+          setProgress((completed / files.length) * 100);
         } catch (err) {
           console.error("Error uploading file:", err);
           setError(err instanceof Error ? err.message : "שגיאה בהעלאת הקובץ");
