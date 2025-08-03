@@ -39,10 +39,25 @@ const ALLOWED_VIDEO_TYPES = [
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 export async function POST(request: Request) {
   console.log("Starting file upload process...");
 
   try {
+    const contentType = request.headers.get("content-type") || "";
+
+    if (!contentType.includes("multipart/form-data")) {
+      return NextResponse.json(
+        { error: "Content type must be multipart/form-data" },
+        { status: 400 }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("file");
 
@@ -80,7 +95,14 @@ export async function POST(request: Request) {
       "_"
     )}`;
 
-    console.log("Preparing to upload file:", safeFileName, "Type:", file.type);
+    console.log(
+      "Preparing to upload file:",
+      safeFileName,
+      "Type:",
+      file.type,
+      "Size:",
+      file.size
+    );
 
     try {
       // Upload to Supabase Storage
@@ -89,6 +111,7 @@ export async function POST(request: Request) {
         .upload(safeFileName, buffer, {
           contentType: file.type,
           cacheControl: "3600",
+          upsert: false,
         });
 
       if (uploadError) {

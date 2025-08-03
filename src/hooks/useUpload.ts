@@ -66,30 +66,26 @@ export const useUpload = () => {
     setProgress(0);
     setError(null);
 
-    try {
-      const urls = [];
-      let completed = 0;
+    const urls: string[] = [];
+    let completed = 0;
 
+    try {
       for (const file of Array.from(files)) {
         try {
           // Validate file before upload
           validateFile(file);
 
-          // Create unique file name
-          const timestamp = Date.now();
-          const fileExt = file.name.split(".").pop();
-          const fileName = `${timestamp}-${Math.random()
-            .toString(36)
-            .substring(7)}.${fileExt}`;
-
-          // Upload to API route
+          // Create form data
           const formData = new FormData();
           formData.append("file", file);
-          formData.append("fileName", fileName);
 
           const response = await fetch("/api/upload", {
             method: "POST",
             body: formData,
+            headers: {
+              // Don't set Content-Type header - browser will set it with boundary
+              Accept: "application/json",
+            },
           });
 
           const result = await response.json();
