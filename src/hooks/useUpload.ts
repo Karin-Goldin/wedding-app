@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
 
 // Define allowed file types
 const ALLOWED_IMAGE_TYPES = [

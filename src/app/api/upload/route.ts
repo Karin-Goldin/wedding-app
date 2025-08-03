@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     // Get file data
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const filename = "file" in file ? file.name : "unnamed-file";
+    const filename = "name" in file ? file.name : "unnamed-file";
     const timestamp = Date.now();
     const safeFileName = `${timestamp}-${filename.replace(
       /[^a-zA-Z0-9.-]/g,
@@ -83,17 +83,20 @@ export async function POST(request: Request) {
 
     try {
       // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("wedding-photos")
         .upload(safeFileName, buffer, {
           contentType: file.type,
           cacheControl: "3600",
         });
 
-      if (error) {
-        console.error("Supabase upload error:", error);
+      if (uploadError) {
+        console.error("Supabase upload error:", uploadError);
         return NextResponse.json(
-          { error: "Failed to upload to storage", details: error.message },
+          {
+            error: "Failed to upload to storage",
+            details: uploadError.message,
+          },
           { status: 500 }
         );
       }
@@ -106,18 +109,21 @@ export async function POST(request: Request) {
       console.log("Got public URL:", publicUrl);
 
       return NextResponse.json({ url: publicUrl });
-    } catch (uploadError: any) {
+    } catch (uploadError) {
       console.error("Upload error:", uploadError);
+      const errorMessage =
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Unknown error occurred";
       return NextResponse.json(
-        { error: "Failed to upload to storage", details: uploadError.message },
+        { error: "Failed to upload to storage", details: errorMessage },
         { status: 500 }
       );
     }
   } catch (error) {
     console.error("API route error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

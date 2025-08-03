@@ -7,7 +7,7 @@ import Image from "next/image";
 
 const GalleryContainer = styled.div`
   width: 100%;
-  padding: 10px;
+  padding: 20px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 20px;
@@ -33,10 +33,6 @@ const ImageCard = styled.div`
     object-fit: cover;
   }
 `;
-
-interface GalleryProps {
-  onLoad?: (hasFiles: boolean) => void;
-}
 
 export default function Gallery() {
   const [files, setFiles] = useState<string[]>([]);
