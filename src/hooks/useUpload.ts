@@ -11,12 +11,19 @@ const ALLOWED_IMAGE_TYPES = [
   "image/gif",
   "image/webp",
   "image/heic",
+  "image/heif",
+  "image/heic-sequence",
+  "image/heif-sequence",
 ];
 
 const ALLOWED_VIDEO_TYPES = [
   "video/mp4",
   "video/quicktime", // .mov files
   "video/webm",
+  "video/x-m4v",
+  "video/hevc", // HEVC/H.265
+  "video/h265",
+  "video/x-h265",
 ];
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -32,7 +39,7 @@ export const useUpload = () => {
       !ALLOWED_VIDEO_TYPES.includes(file.type)
     ) {
       throw new Error(
-        `סוג קובץ לא נתמך. הקבצים הנתמכים הם: JPEG, PNG, GIF, WEBP, HEIC, MP4, MOV, WEBM`
+        `סוג קובץ לא נתמך. הקבצים הנתמכים הם: JPEG, PNG, GIF, WEBP, HEIC/HEIF, MP4 (כולל HEVC), MOV, WEBM`
       );
     }
 
