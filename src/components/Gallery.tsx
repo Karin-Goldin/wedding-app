@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import styled from "styled-components";
 import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
 import Image from "next/image";
@@ -50,6 +50,8 @@ const VideoPreview = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 `;
 
 const VideoOverlay = styled.div`
@@ -71,12 +73,8 @@ const PlayIcon = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: transform 0.2s ease;
-
-  &:hover {
-    transform: scale(1.1);
-  }
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1;
 
   svg {
     width: 30px;
@@ -84,6 +82,97 @@ const PlayIcon = styled.div`
     fill: white;
     margin-left: 4px;
   }
+`;
+
+const DeleteButton = styled.button`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  svg {
+    width: 20px;
+    height: 20px;
+    fill: #e74c3c;
+  }
+
+  &:hover {
+    background: white;
+  }
+`;
+
+const ConfirmDialog = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+`;
+
+const ConfirmContent = styled.div`
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  max-width: 90%;
+  width: 300px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const ConfirmText = styled.p`
+  color: #333;
+  margin: 0;
+  font-size: 1rem;
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+`;
+
+const Button = styled.button<{ $isDelete?: boolean }>`
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  ${(props) =>
+    props.$isDelete
+      ? `
+    background: #e74c3c;
+    color: white;
+    &:hover {
+      background: #c0392b;
+    }
+  `
+      : `
+    background: #eee;
+    color: #333;
+    &:hover {
+      background: #ddd;
+    }
+  `}
 `;
 
 interface VideoThumbnailProps {
@@ -112,7 +201,8 @@ export default function Gallery() {
   const [files, setFiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
-  const [loadedThumbnails, setLoadedThumbnails] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<string | null>(null);
 
   const loadFiles = useCallback(async () => {
     try {
@@ -136,14 +226,40 @@ export default function Gallery() {
       );
 
       setFiles(urls);
-      // Reset thumbnail counter when files change
-      setLoadedThumbnails(0);
     } catch (error) {
       console.error("Error:", error);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const handleDelete = async (url: string) => {
+    if (deleting) return; // Prevent multiple deletes at once
+
+    try {
+      setDeleting(true);
+      // Extract filename from URL
+      const filename = url.split("/").pop();
+      if (!filename) return;
+
+      const { error } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .remove([filename]);
+
+      if (error) {
+        console.error("Error deleting file:", error);
+        return;
+      }
+
+      // Refresh the file list
+      loadFiles();
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setDeleting(false);
+      setFileToDelete(null);
+    }
+  };
 
   useEffect(() => {
     loadFiles();
@@ -177,10 +293,6 @@ export default function Gallery() {
     return /\.(mp4|mov|webm|3gp|mkv|mpeg|ogv|avi)$/i.test(url);
   };
 
-  const handleThumbnailLoad = useCallback(() => {
-    setLoadedThumbnails((prev) => prev + 1);
-  }, []);
-
   if (loading) {
     return <div>טוען תמונות...</div>;
   }
@@ -189,37 +301,44 @@ export default function Gallery() {
     return null; // Empty state is handled by EmptyState component
   }
 
-  // Remove this check to show content immediately
-  // const videoCount = files.filter((url) => isVideo(url)).length;
-  // if (videoCount > 0 && loadedThumbnails < videoCount) {
-  //   return <div>מכין תצוגה מקדימה לסרטונים...</div>;
-  // }
-
   return (
     <>
       <GalleryContainer>
         {files.map((url) => (
-          <ImageCard key={url} onClick={() => setSelectedMedia(url)}>
-            {isVideo(url) ? (
-              <>
-                <VideoThumbnail url={url} onLoad={handleThumbnailLoad} />
-                <VideoOverlay>
+          <ImageCard key={url}>
+            <DeleteButton
+              onClick={(e) => {
+                e.stopPropagation();
+                setFileToDelete(url);
+              }}
+              disabled={deleting}
+            >
+              <svg viewBox="0 0 24 24">
+                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+              </svg>
+            </DeleteButton>
+            <div
+              onClick={() => setSelectedMedia(url)}
+              style={{ width: "100%", height: "100%" }}
+            >
+              {isVideo(url) ? (
+                <VideoPreview>
                   <PlayIcon>
                     <svg viewBox="0 0 24 24">
                       <path d="M8 5v14l11-7z" />
                     </svg>
                   </PlayIcon>
-                </VideoOverlay>
-              </>
-            ) : (
-              <Image
-                src={url}
-                alt="Wedding photo"
-                width={400}
-                height={400}
-                style={{ objectFit: "cover" }}
-              />
-            )}
+                </VideoPreview>
+              ) : (
+                <Image
+                  src={url}
+                  alt="Wedding photo"
+                  width={400}
+                  height={400}
+                  style={{ objectFit: "cover" }}
+                />
+              )}
+            </div>
           </ImageCard>
         ))}
       </GalleryContainer>
@@ -230,6 +349,31 @@ export default function Gallery() {
           isVideo={isVideo(selectedMedia)}
           onClose={() => setSelectedMedia(null)}
         />
+      )}
+
+      {fileToDelete && (
+        <ConfirmDialog
+          onClick={(e) => {
+            // Close dialog when clicking outside
+            if (e.target === e.currentTarget) {
+              setFileToDelete(null);
+            }
+          }}
+        >
+          <ConfirmContent>
+            <ConfirmText>האם למחוק את התמונה?</ConfirmText>
+            <ButtonGroup>
+              <Button onClick={() => setFileToDelete(null)}>ביטול</Button>
+              <Button
+                $isDelete
+                onClick={() => handleDelete(fileToDelete)}
+                disabled={deleting}
+              >
+                {deleting ? "מוחק..." : "מחיקה"}
+              </Button>
+            </ButtonGroup>
+          </ConfirmContent>
+        </ConfirmDialog>
       )}
     </>
   );
