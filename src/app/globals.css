@@ -52,3 +52,18 @@ body {
   margin: 0;
   padding: 0;
 }
+
+@media print {
+  body {
+    background: white !important;
+  }
+
+  .page-container::before,
+  .page-container::after {
+    display: none !important;
+  }
+
+  button {
+    display: none !important;
+  }
+}
