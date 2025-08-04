@@ -267,6 +267,12 @@ export default function Gallery() {
         body: JSON.stringify({ password }),
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("Password verification failed:", error);
+        return false;
+      }
+
       const data = await response.json();
       return data.valid;
     } catch (error) {
