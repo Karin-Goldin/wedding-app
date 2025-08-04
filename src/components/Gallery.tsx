@@ -43,31 +43,42 @@ const VideoPreview = styled.div`
   width: 100%;
   height: 100%;
   position: relative;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.1);
 
   video {
-    position: absolute;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: 0;
   }
 `;
 
 const VideoPlaceholder = styled.div`
   width: 100%;
   height: 100%;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
+  background: url("/karin&sandy.png") center center;
+  background-size: cover;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+  }
 
   svg {
     width: 32px;
     height: 32px;
     fill: #8b4513;
+    position: relative;
+    z-index: 1;
   }
 `;
 
@@ -109,33 +120,14 @@ interface VideoThumbnailProps {
 
 function VideoThumbnail({ url, onLoad }: VideoThumbnailProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [thumbnail, setThumbnail] = useState<string | null>(null);
 
   useEffect(() => {
     const video = videoRef.current;
-    const canvas = canvasRef.current;
-
-    if (!video || !canvas) return;
+    if (!video) return;
 
     const handleLoadedData = () => {
-      // Set video to first frame
       video.currentTime = 0.1; // Start a bit later to avoid black frame
-
-      // When seeking is complete, capture the frame
-      const handleSeeked = () => {
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0);
-          setThumbnail(canvas.toDataURL());
-          onLoad?.();
-        }
-        video.removeEventListener("seeked", handleSeeked);
-      };
-
-      video.addEventListener("seeked", handleSeeked);
+      onLoad?.();
     };
 
     video.addEventListener("loadeddata", handleLoadedData);
@@ -147,23 +139,14 @@ function VideoThumbnail({ url, onLoad }: VideoThumbnailProps) {
 
   return (
     <VideoPreview>
-      <video ref={videoRef} src={url} preload="metadata" muted playsInline />
-      <canvas ref={canvasRef} style={{ display: "none" }} />
-      {thumbnail ? (
-        <Image
-          src={thumbnail}
-          alt="Video thumbnail"
-          width={400}
-          height={400}
-          style={{ objectFit: "cover" }}
-        />
-      ) : (
-        <VideoPlaceholder>
-          <svg viewBox="0 0 24 24">
-            <path d="M8 5v14l11-7z" />
-          </svg>
-        </VideoPlaceholder>
-      )}
+      <video
+        ref={videoRef}
+        src={url}
+        preload="metadata"
+        muted
+        playsInline
+        style={{ opacity: 1 }} // Make video visible
+      />
     </VideoPreview>
   );
 }
