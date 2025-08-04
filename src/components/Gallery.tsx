@@ -20,7 +20,7 @@ const GalleryContainer = styled.div`
 const ImageCard = styled.div`
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s;
@@ -36,6 +36,38 @@ const ImageCard = styled.div`
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+`;
+
+const VideoPreview = styled.div`
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+
+  video {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+  }
+`;
+
+const VideoPlaceholder = styled.div`
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  svg {
+    width: 32px;
+    height: 32px;
+    fill: #8b4513;
   }
 `;
 
@@ -60,27 +92,13 @@ const PlayIcon = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
   svg {
     width: 24px;
     height: 24px;
     fill: #8b4513;
-    margin-left: 4px; // Offset slightly to center the triangle
-  }
-`;
-
-const VideoPreview = styled.div`
-  width: 100%;
-  height: 100%;
-  position: relative;
-  background: #f0f0f0;
-
-  video {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    opacity: 0;
+    margin-left: 4px;
   }
 `;
 
@@ -102,7 +120,7 @@ function VideoThumbnail({ url, onLoad }: VideoThumbnailProps) {
 
     const handleLoadedData = () => {
       // Set video to first frame
-      video.currentTime = 0;
+      video.currentTime = 0.1; // Start a bit later to avoid black frame
 
       // When seeking is complete, capture the frame
       const handleSeeked = () => {
@@ -131,7 +149,7 @@ function VideoThumbnail({ url, onLoad }: VideoThumbnailProps) {
     <VideoPreview>
       <video ref={videoRef} src={url} preload="metadata" muted playsInline />
       <canvas ref={canvasRef} style={{ display: "none" }} />
-      {thumbnail && (
+      {thumbnail ? (
         <Image
           src={thumbnail}
           alt="Video thumbnail"
@@ -139,6 +157,12 @@ function VideoThumbnail({ url, onLoad }: VideoThumbnailProps) {
           height={400}
           style={{ objectFit: "cover" }}
         />
+      ) : (
+        <VideoPlaceholder>
+          <svg viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </VideoPlaceholder>
       )}
     </VideoPreview>
   );
@@ -225,10 +249,11 @@ export default function Gallery() {
     return null; // Empty state is handled by EmptyState component
   }
 
-  const videoCount = files.filter((url) => isVideo(url)).length;
-  if (videoCount > 0 && loadedThumbnails < videoCount) {
-    return <div>מכין תצוגה מקדימה לסרטונים...</div>;
-  }
+  // Remove this check to show content immediately
+  // const videoCount = files.filter((url) => isVideo(url)).length;
+  // if (videoCount > 0 && loadedThumbnails < videoCount) {
+  //   return <div>מכין תצוגה מקדימה לסרטונים...</div>;
+  // }
 
   return (
     <>
