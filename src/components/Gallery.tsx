@@ -43,45 +43,13 @@ const VideoPreview = styled.div`
   width: 100%;
   height: 100%;
   position: relative;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
   border-radius: 16px;
   overflow: hidden;
-
-  video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-`;
-
-const VideoPlaceholder = styled.div`
-  width: 100%;
-  height: 100%;
-  background: url("/karin&sandy.png") center center;
-  background-size: cover;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(10px);
-  }
-
-  svg {
-    width: 32px;
-    height: 32px;
-    fill: #8b4513;
-    position: relative;
-    z-index: 1;
-  }
 `;
 
 const VideoOverlay = styled.div`
@@ -90,27 +58,30 @@ const VideoOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
 `;
 
 const PlayIcon = styled.div`
-  width: 50px;
-  height: 50px;
-  background: rgba(255, 255, 255, 0.9);
+  width: 60px;
+  height: 60px;
+  background: #8b4513;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: scale(1.1);
+  }
 
   svg {
-    width: 24px;
-    height: 24px;
-    fill: #8b4513;
+    width: 30px;
+    height: 30px;
+    fill: white;
     margin-left: 4px;
   }
 `;
@@ -121,54 +92,18 @@ interface VideoThumbnailProps {
 }
 
 function VideoThumbnail({ url, onLoad }: VideoThumbnailProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    // Create a temporary video to get the poster
-    const tempVideo = document.createElement("video");
-    tempVideo.src = url;
-    tempVideo.muted = true;
-    tempVideo.playsInline = true;
-
-    const handleLoadedData = () => {
-      // Set to first frame
-      tempVideo.currentTime = 0.1;
-    };
-
-    const handleSeeked = () => {
-      // Create a canvas to capture the frame
-      const canvas = document.createElement("canvas");
-      canvas.width = tempVideo.videoWidth;
-      canvas.height = tempVideo.videoHeight;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(tempVideo, 0, 0);
-        // Set the poster
-        if (videoRef.current) {
-          videoRef.current.poster = canvas.toDataURL();
-          onLoad?.();
-        }
-      }
-      // Clean up
-      tempVideo.remove();
-    };
-
-    tempVideo.addEventListener("loadeddata", handleLoadedData);
-    tempVideo.addEventListener("seeked", handleSeeked);
-
-    return () => {
-      tempVideo.removeEventListener("loadeddata", handleLoadedData);
-      tempVideo.removeEventListener("seeked", handleSeeked);
-      tempVideo.remove();
-    };
-  }, [url, onLoad]);
+    // Notify that we're ready immediately
+    onLoad?.();
+  }, [onLoad]);
 
   return (
     <VideoPreview>
-      <video ref={videoRef} src={url} preload="none" muted playsInline />
+      <PlayIcon>
+        <svg viewBox="0 0 24 24">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </PlayIcon>
     </VideoPreview>
   );
 }
