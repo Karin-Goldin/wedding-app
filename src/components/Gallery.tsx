@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import styled from "styled-components";
 import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
 import Image from "next/image";
@@ -32,8 +32,7 @@ const ImageCard = styled.div`
     transform: translateY(-5px);
   }
 
-  img,
-  video {
+  img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -70,18 +69,86 @@ const PlayIcon = styled.div`
   }
 `;
 
-const VideoThumbnail = styled.div<{ $url: string }>`
+const VideoPreview = styled.div`
   width: 100%;
   height: 100%;
-  background-image: url(${(props) => props.$url});
-  background-size: cover;
-  background-position: center;
+  position: relative;
+  background: #f0f0f0;
+
+  video {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+  }
 `;
+
+interface VideoThumbnailProps {
+  url: string;
+  onLoad?: () => void;
+}
+
+function VideoThumbnail({ url, onLoad }: VideoThumbnailProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas) return;
+
+    const handleLoadedData = () => {
+      // Set video to first frame
+      video.currentTime = 0;
+
+      // When seeking is complete, capture the frame
+      const handleSeeked = () => {
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0);
+          setThumbnail(canvas.toDataURL());
+          onLoad?.();
+        }
+        video.removeEventListener("seeked", handleSeeked);
+      };
+
+      video.addEventListener("seeked", handleSeeked);
+    };
+
+    video.addEventListener("loadeddata", handleLoadedData);
+
+    return () => {
+      video.removeEventListener("loadeddata", handleLoadedData);
+    };
+  }, [url, onLoad]);
+
+  return (
+    <VideoPreview>
+      <video ref={videoRef} src={url} preload="metadata" muted playsInline />
+      <canvas ref={canvasRef} style={{ display: "none" }} />
+      {thumbnail && (
+        <Image
+          src={thumbnail}
+          alt="Video thumbnail"
+          width={400}
+          height={400}
+          style={{ objectFit: "cover" }}
+        />
+      )}
+    </VideoPreview>
+  );
+}
 
 export default function Gallery() {
   const [files, setFiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
+  const [loadedThumbnails, setLoadedThumbnails] = useState(0);
 
   const loadFiles = useCallback(async () => {
     try {
@@ -105,6 +172,8 @@ export default function Gallery() {
       );
 
       setFiles(urls);
+      // Reset thumbnail counter when files change
+      setLoadedThumbnails(0);
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -144,12 +213,21 @@ export default function Gallery() {
     return /\.(mp4|mov|webm|3gp|mkv|mpeg|ogv|avi)$/i.test(url);
   };
 
+  const handleThumbnailLoad = useCallback(() => {
+    setLoadedThumbnails((prev) => prev + 1);
+  }, []);
+
   if (loading) {
     return <div>טוען תמונות...</div>;
   }
 
   if (files.length === 0) {
     return null; // Empty state is handled by EmptyState component
+  }
+
+  const videoCount = files.filter((url) => isVideo(url)).length;
+  if (videoCount > 0 && loadedThumbnails < videoCount) {
+    return <div>מכין תצוגה מקדימה לסרטונים...</div>;
   }
 
   return (
@@ -159,7 +237,7 @@ export default function Gallery() {
           <ImageCard key={url} onClick={() => setSelectedMedia(url)}>
             {isVideo(url) ? (
               <>
-                <VideoThumbnail $url={url} />
+                <VideoThumbnail url={url} onLoad={handleThumbnailLoad} />
                 <VideoOverlay>
                   <PlayIcon>
                     <svg viewBox="0 0 24 24">
