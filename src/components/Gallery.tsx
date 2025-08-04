@@ -43,12 +43,14 @@ const VideoPreview = styled.div`
   width: 100%;
   height: 100%;
   position: relative;
-  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  overflow: hidden;
 
   video {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    display: block;
   }
 `;
 
@@ -125,28 +127,48 @@ function VideoThumbnail({ url, onLoad }: VideoThumbnailProps) {
     const video = videoRef.current;
     if (!video) return;
 
+    // Create a temporary video to get the poster
+    const tempVideo = document.createElement("video");
+    tempVideo.src = url;
+    tempVideo.muted = true;
+    tempVideo.playsInline = true;
+
     const handleLoadedData = () => {
-      video.currentTime = 0.1; // Start a bit later to avoid black frame
-      onLoad?.();
+      // Set to first frame
+      tempVideo.currentTime = 0.1;
     };
 
-    video.addEventListener("loadeddata", handleLoadedData);
+    const handleSeeked = () => {
+      // Create a canvas to capture the frame
+      const canvas = document.createElement("canvas");
+      canvas.width = tempVideo.videoWidth;
+      canvas.height = tempVideo.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(tempVideo, 0, 0);
+        // Set the poster
+        if (videoRef.current) {
+          videoRef.current.poster = canvas.toDataURL();
+          onLoad?.();
+        }
+      }
+      // Clean up
+      tempVideo.remove();
+    };
+
+    tempVideo.addEventListener("loadeddata", handleLoadedData);
+    tempVideo.addEventListener("seeked", handleSeeked);
 
     return () => {
-      video.removeEventListener("loadeddata", handleLoadedData);
+      tempVideo.removeEventListener("loadeddata", handleLoadedData);
+      tempVideo.removeEventListener("seeked", handleSeeked);
+      tempVideo.remove();
     };
   }, [url, onLoad]);
 
   return (
     <VideoPreview>
-      <video
-        ref={videoRef}
-        src={url}
-        preload="metadata"
-        muted
-        playsInline
-        style={{ opacity: 1 }} // Make video visible
-      />
+      <video ref={videoRef} src={url} preload="none" muted playsInline />
     </VideoPreview>
   );
 }
