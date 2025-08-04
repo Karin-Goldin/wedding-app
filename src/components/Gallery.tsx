@@ -26,6 +26,7 @@ const ImageCard = styled.div`
   transition: transform 0.2s;
   aspect-ratio: 1;
   cursor: pointer;
+  position: relative;
 
   &:hover {
     transform: translateY(-5px);
@@ -37,6 +38,44 @@ const ImageCard = styled.div`
     height: 100%;
     object-fit: cover;
   }
+`;
+
+const VideoOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+`;
+
+const PlayIcon = styled.div`
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  svg {
+    width: 24px;
+    height: 24px;
+    fill: #8b4513;
+    margin-left: 4px; // Offset slightly to center the triangle
+  }
+`;
+
+const VideoThumbnail = styled.div<{ $url: string }>`
+  width: 100%;
+  height: 100%;
+  background-image: url(${(props) => props.$url});
+  background-size: cover;
+  background-position: center;
 `;
 
 export default function Gallery() {
@@ -119,10 +158,16 @@ export default function Gallery() {
         {files.map((url) => (
           <ImageCard key={url} onClick={() => setSelectedMedia(url)}>
             {isVideo(url) ? (
-              <video>
-                <source src={url} type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
+              <>
+                <VideoThumbnail $url={url} />
+                <VideoOverlay>
+                  <PlayIcon>
+                    <svg viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </PlayIcon>
+                </VideoOverlay>
+              </>
             ) : (
               <Image
                 src={url}
