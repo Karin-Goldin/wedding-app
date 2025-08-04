@@ -175,34 +175,48 @@ const Button = styled.button<{ $isDelete?: boolean }>`
   `}
 `;
 
-interface VideoThumbnailProps {
+const PasswordDialog = styled(ConfirmDialog)`
+  // Inherits styles from ConfirmDialog
+`;
+
+const PasswordInput = styled.input`
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  width: 100%;
+  margin-top: 8px;
+  text-align: center;
+
+  &:focus {
+    outline: none;
+    border-color: #8b4513;
+  }
+`;
+
+const ErrorText = styled.p`
+  color: #e74c3c;
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+`;
+
+interface FileInfo {
   url: string;
-  onLoad?: () => void;
+  uploadTime: number;
 }
 
-function VideoThumbnail({ url, onLoad }: VideoThumbnailProps) {
-  useEffect(() => {
-    // Notify that we're ready immediately
-    onLoad?.();
-  }, [onLoad]);
-
-  return (
-    <VideoPreview>
-      <PlayIcon>
-        <svg viewBox="0 0 24 24">
-          <path d="M8 5v14l11-7z" />
-        </svg>
-      </PlayIcon>
-    </VideoPreview>
-  );
-}
+const DELETE_WINDOW_MINUTES = 5;
 
 export default function Gallery() {
-  const [files, setFiles] = useState<string[]>([]);
+  const [files, setFiles] = useState<FileInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<string | null>(null);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [verifyingPassword, setVerifyingPassword] = useState(false);
 
   const loadFiles = useCallback(async () => {
     try {
@@ -215,17 +229,21 @@ export default function Gallery() {
         return;
       }
 
-      // Get public URLs for all files
-      const urls = await Promise.all(
-        data.map((file) => {
+      // Get public URLs and creation times for all files
+      const filesInfo = await Promise.all(
+        data.map(async (file) => {
           const {
             data: { publicUrl },
           } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(file.name);
-          return publicUrl;
+
+          return {
+            url: publicUrl,
+            uploadTime: new Date(file.created_at || Date.now()).getTime(),
+          };
         })
       );
 
-      setFiles(urls);
+      setFiles(filesInfo);
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -233,10 +251,56 @@ export default function Gallery() {
     }
   }, []);
 
-  const handleDelete = async (url: string) => {
-    if (deleting) return; // Prevent multiple deletes at once
+  const canDeleteWithoutPassword = (uploadTime: number) => {
+    const now = Date.now();
+    const minutesSinceUpload = (now - uploadTime) / (1000 * 60);
+    return minutesSinceUpload <= DELETE_WINDOW_MINUTES;
+  };
+
+  const verifyPassword = async (password: string): Promise<boolean> => {
+    try {
+      const response = await fetch("/api/verify-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await response.json();
+      return data.valid;
+    } catch (error) {
+      console.error("Error verifying password:", error);
+      return false;
+    }
+  };
+
+  const handleDelete = async (url: string, providedPassword?: string) => {
+    if (deleting) return;
 
     try {
+      const fileInfo = files.find((f) => f.url === url);
+      if (!fileInfo) return;
+
+      // Check if we need password
+      const needsPassword = !canDeleteWithoutPassword(fileInfo.uploadTime);
+
+      if (needsPassword) {
+        if (!providedPassword) {
+          setShowPasswordDialog(true);
+          return;
+        }
+
+        setVerifyingPassword(true);
+        const isValid = await verifyPassword(providedPassword);
+        setVerifyingPassword(false);
+
+        if (!isValid) {
+          setPasswordError("סיסמה שגויה");
+          return;
+        }
+      }
+
       setDeleting(true);
       // Extract filename from URL
       const filename = url.split("/").pop();
@@ -253,6 +317,9 @@ export default function Gallery() {
 
       // Refresh the file list
       loadFiles();
+      setShowPasswordDialog(false);
+      setPassword("");
+      setPasswordError("");
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -298,18 +365,21 @@ export default function Gallery() {
   }
 
   if (files.length === 0) {
-    return null; // Empty state is handled by EmptyState component
+    return null;
   }
 
   return (
     <>
       <GalleryContainer>
-        {files.map((url) => (
-          <ImageCard key={url}>
+        {files.map((fileInfo) => (
+          <ImageCard key={fileInfo.url}>
             <DeleteButton
               onClick={(e) => {
                 e.stopPropagation();
-                setFileToDelete(url);
+                setFileToDelete(fileInfo.url);
+                if (!canDeleteWithoutPassword(fileInfo.uploadTime)) {
+                  setShowPasswordDialog(true);
+                }
               }}
               disabled={deleting}
             >
@@ -318,10 +388,10 @@ export default function Gallery() {
               </svg>
             </DeleteButton>
             <div
-              onClick={() => setSelectedMedia(url)}
+              onClick={() => setSelectedMedia(fileInfo.url)}
               style={{ width: "100%", height: "100%" }}
             >
-              {isVideo(url) ? (
+              {isVideo(fileInfo.url) ? (
                 <VideoPreview>
                   <PlayIcon>
                     <svg viewBox="0 0 24 24">
@@ -331,7 +401,7 @@ export default function Gallery() {
                 </VideoPreview>
               ) : (
                 <Image
-                  src={url}
+                  src={fileInfo.url}
                   alt="Wedding photo"
                   width={400}
                   height={400}
@@ -351,10 +421,9 @@ export default function Gallery() {
         />
       )}
 
-      {fileToDelete && (
+      {fileToDelete && !showPasswordDialog && (
         <ConfirmDialog
           onClick={(e) => {
-            // Close dialog when clicking outside
             if (e.target === e.currentTarget) {
               setFileToDelete(null);
             }
@@ -374,6 +443,53 @@ export default function Gallery() {
             </ButtonGroup>
           </ConfirmContent>
         </ConfirmDialog>
+      )}
+
+      {showPasswordDialog && fileToDelete && (
+        <PasswordDialog
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowPasswordDialog(false);
+              setFileToDelete(null);
+              setPassword("");
+              setPasswordError("");
+            }
+          }}
+        >
+          <ConfirmContent>
+            <ConfirmText>נדרשת סיסמה למחיקת תמונה זו</ConfirmText>
+            <PasswordInput
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setPasswordError("");
+              }}
+              placeholder="הזן סיסמה"
+              autoFocus
+            />
+            {passwordError && <ErrorText>{passwordError}</ErrorText>}
+            <ButtonGroup>
+              <Button
+                onClick={() => {
+                  setShowPasswordDialog(false);
+                  setFileToDelete(null);
+                  setPassword("");
+                  setPasswordError("");
+                }}
+              >
+                ביטול
+              </Button>
+              <Button
+                $isDelete
+                onClick={() => handleDelete(fileToDelete, password)}
+                disabled={deleting || verifyingPassword || !password}
+              >
+                {deleting ? "מוחק..." : verifyingPassword ? "בודק..." : "מחיקה"}
+              </Button>
+            </ButtonGroup>
+          </ConfirmContent>
+        </PasswordDialog>
       )}
     </>
   );
