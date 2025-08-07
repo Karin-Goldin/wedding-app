@@ -31,9 +31,6 @@ const Title = styled.h1`
   text-align: center;
   font-size: 1.5rem;
   margin: 0;
-  max-width: 600px;
-  white-space: normal;
-  line-height: 1.4;
 `;
 
 const Subtitle = styled.p`
@@ -69,11 +66,12 @@ export default function QRPage() {
     <QRPageWrapper>
       <QRContainer>
         <Title>
-          משפחה וחברים שלנו, מוזמנים להעלות תמונות וסרטונים מהיום המיוחד שלנו ❤️
+          משפחה וחברים שלנו, מוזמנים להעלות תמונות וסרטונים שלכם מהיום המיוחד
+          שלנו ❤️
         </Title>
         <QRCodeSVG value={appUrl} size={300} level="H" includeMargin={true} />
-        <Subtitle>או היכנסו לכתובת:</Subtitle>
-        <Subtitle style={{ direction: "ltr" }}>{appUrl}</Subtitle>
+        {/* <Subtitle>או היכנסו לכתובת:</Subtitle>
+        <Subtitle style={{ direction: "ltr" }}>{appUrl}</Subtitle> */}
       </QRContainer>
       <PrintButton onClick={handlePrint}>הדפסה</PrintButton>
     </QRPageWrapper>

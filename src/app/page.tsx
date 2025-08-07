@@ -4,24 +4,36 @@ import React, { useRef, useState } from "react";
 import styled from "styled-components";
 import { useUpload } from "@/hooks/useUpload";
 import GalleryPreview from "@/components/GalleryPreview";
+import Image from "next/image";
 
 const Container = styled.div`
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
   margin: 0;
-  padding: 0;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
   overflow: hidden;
 `;
 
+const HeroImage = styled.div`
+  width: 100%;
+  height: 50vh;
+  position: relative;
+  margin-bottom: 1rem;
+
+  img {
+    object-fit: contain !important;
+    padding: 0 10px;
+  }
+`;
+
 const ContentWrapper = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  margin-top: 32vh;
+  gap: 0.75rem;
   width: 100%;
   max-width: 350px;
   padding: 0;
@@ -127,6 +139,15 @@ export default function Home() {
   return (
     <div className="page-container" id="home-page">
       <Container>
+        <HeroImage>
+          <Image
+            src="/hero.png"
+            alt="Wedding couple illustration"
+            fill
+            style={{ objectFit: "contain" }}
+            priority
+          />
+        </HeroImage>
         <ContentWrapper>
           <UploadSection onClick={handleClick}>
             <FileInput

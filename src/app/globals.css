@@ -31,7 +31,7 @@ body {
   left: 0;
   right: 0;
   background-repeat: no-repeat;
-  background-size: contain;
+  background-size: 100% auto;
   z-index: -1;
 }
 
@@ -45,27 +45,6 @@ body {
   bottom: 0;
   background-image: url("/bg2.svg");
   background-position: bottom center;
-}
-
-@media (min-width: 1024px) {
-  .page-container::before,
-  .page-container::after {
-    background-size: 80% auto;
-  }
-}
-
-@media (min-width: 1440px) {
-  .page-container::before,
-  .page-container::after {
-    background-size: 70% auto;
-  }
-}
-
-@media (min-width: 1920px) {
-  .page-container::before,
-  .page-container::after {
-    background-size: 60% auto;
-  }
 }
 
 * {
