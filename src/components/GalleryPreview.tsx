@@ -8,13 +8,13 @@ import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
 const PreviewCard = styled.div`
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 1rem;
+  border-radius: 14px;
+  padding: 0.8rem;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.3rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -27,14 +27,14 @@ const PreviewCard = styled.div`
 
 const Title = styled.h2`
   color: #8b4513;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   margin: 0;
   text-align: center;
 `;
 
 const Subtitle = styled.p`
   color: #a0522d;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   margin: 0;
   text-align: center;
 `;
@@ -82,10 +82,10 @@ const EmptyState = styled(PreviewCard)`
 `;
 
 const CameraIcon = styled.div`
-  width: 45px;
-  height: 45px;
+  width: 35px;
+  height: 35px;
   color: #a0522d;
-  margin: 0.5rem 0;
+  margin: 0.3rem 0;
 
   svg {
     width: 100%;

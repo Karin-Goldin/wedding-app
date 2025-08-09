@@ -12,22 +12,22 @@ const Container = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: 20px;
+  padding: 15px;
   position: relative;
   z-index: 1;
 `;
 
 const HeroImage = styled.div`
   position: relative;
-  width: 300px;
-  height: 300px;
-  margin-bottom: 2rem;
+  width: 280px;
+  height: 280px;
+  margin-bottom: 1.5rem;
 `;
 
 const ContentWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1rem;
   width: 100%;
   max-width: 600px;
 `;
@@ -35,8 +35,8 @@ const ContentWrapper = styled.div`
 const UploadSection = styled.div`
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
-  border-radius: 24px;
-  padding: 2rem;
+  border-radius: 16px;
+  padding: 1rem;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -50,9 +50,9 @@ const UploadSection = styled.div`
 `;
 
 const UploadIcon = styled.div`
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 1rem;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 0.6rem;
   background: rgba(139, 69, 19, 0.1);
   border-radius: 50%;
   display: flex;
@@ -67,22 +67,22 @@ const UploadIcon = styled.div`
   }
 
   svg {
-    width: 40px;
-    height: 40px;
+    width: 20px;
+    height: 20px;
   }
 `;
 
 const Title = styled.h1`
-  font-size: 2rem;
+  font-size: 1.6rem;
   margin: 0;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
   color: #8b4513;
 `;
 
 const Subtitle = styled.p`
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   margin: 0;
-  margin-bottom: 1rem;
+  margin-bottom: 0.8rem;
   color: #666;
 `;
 
