@@ -159,12 +159,12 @@ If the app goes down during the wedding:
 
 1. Check Vercel status page
 2. Check Supabase status page
-3. Have backup plan (Google Photos, WhatsApp group)
+3. Have backup plan (WhatsApp group, external hard drive)
 
 ## 💡 **Pro Tips**
 
 1. **Pre-wedding Testing:** Have 50+ people test the app simultaneously
-2. **Backup Plan:** Keep a simple Google Photos album as backup
+2. **Backup Plan:** Keep a simple WhatsApp group or external hard drive as backup
 3. **Instructions:** Provide clear instructions to guests about file size limits
 4. **WiFi:** Ensure venue has good WiFi coverage
 5. **QR Codes:** Print multiple QR codes for easy access
