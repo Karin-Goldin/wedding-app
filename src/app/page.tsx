@@ -122,6 +122,22 @@ const ProgressBar = styled.div<{ $progress: number }>`
   }
 `;
 
+const Footer = styled.footer`
+  text-align: center;
+  padding: 1rem 0;
+  margin-top: 2rem;
+  color: #8b4513;
+  font-size: 0.9rem;
+  font-weight: 500;
+  opacity: 1;
+  border-top: 1px solid rgba(139, 69, 19, 0.3);
+  width: 100%;
+  max-width: 600px;
+  line-height: 1.4;
+  direction: ltr;
+  unicode-bidi: bidi-override;
+`;
+
 export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [key, setKey] = useState(0);
@@ -185,6 +201,8 @@ export default function Home() {
 
           <GalleryPreview key={key} />
         </ContentWrapper>
+
+        <Footer>© 2025 Karin Goldin. Designed and developed by me.</Footer>
       </Container>
     </div>
   );

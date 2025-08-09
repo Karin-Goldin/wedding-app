@@ -64,6 +64,22 @@ const BackButton = styled.button`
   }
 `;
 
+const Footer = styled.footer`
+  text-align: center;
+  padding: 1rem 0;
+  margin-top: 2rem;
+  color: #8b4513;
+  font-size: 0.9rem;
+  font-weight: 500;
+  opacity: 1;
+  border-top: 1px solid rgba(139, 69, 19, 0.3);
+  width: 100%;
+  max-width: 1200px;
+  line-height: 1.4;
+  direction: ltr;
+  unicode-bidi: bidi-override;
+`;
+
 export default function GalleryPage() {
   return (
     <GalleryPageWrapper>
@@ -73,6 +89,8 @@ export default function GalleryPage() {
           <Title>הזכרונות שלנו איתכם</Title>
         </Header>
         <Gallery />
+
+        <Footer>© 2025 Karin Goldin. Designed and developed by me.</Footer>
       </GalleryPageContainer>
     </GalleryPageWrapper>
   );
