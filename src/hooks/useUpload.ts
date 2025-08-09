@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
 
 // Define allowed file types
 const ALLOWED_IMAGE_TYPES = [
@@ -36,6 +35,30 @@ const ALLOWED_VIDEO_TYPES = [
 ];
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+// New: enforce short clips only
+const MAX_VIDEO_DURATION_SECONDS = 20; // ~20s clips
+const isVideoType = (type: string) => ALLOWED_VIDEO_TYPES.includes(type);
+
+async function getVideoDuration(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    try {
+      const url = URL.createObjectURL(file);
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        resolve(video.duration || 0);
+      };
+      video.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("לא ניתן לקרוא את פרטי הווידאו"));
+      };
+      video.src = url;
+    } catch (e) {
+      reject(e as Error);
+    }
+  });
+}
 
 export const useUpload = () => {
   const [isUploading, setIsUploading] = useState(false);
@@ -76,31 +99,51 @@ export const useUpload = () => {
           // Validate file before upload
           validateFile(file);
 
-          // Create a unique file name
-          const timestamp = Date.now();
-          const randomString = Math.random().toString(36).substring(7);
-          const fileExt = file.name.split(".").pop();
-          const fileName = `${timestamp}-${randomString}.${fileExt}`;
-
-          // Upload directly to Supabase Storage
-          const { error: uploadError, data } = await supabase.storage
-            .from(STORAGE_BUCKET)
-            .upload(fileName, file, {
-              cacheControl: "3600",
-              upsert: false,
-            });
-
-          if (uploadError) {
-            console.error("Upload error:", uploadError);
-            throw new Error(uploadError.message);
+          // If this is a video, read metadata and enforce max duration (~20s)
+          if (isVideoType(file.type)) {
+            const durationSec = await getVideoDuration(file);
+            if (durationSec > MAX_VIDEO_DURATION_SECONDS + 1) {
+              // +1s tolerance for metadata rounding
+              throw new Error(
+                `הווידאו ארוך מדי (${Math.round(
+                  durationSec
+                )} שניות). המקסימום המותר הוא ~${MAX_VIDEO_DURATION_SECONDS} שניות`
+              );
+            }
           }
 
-          // Get the public URL
-          const {
-            data: { publicUrl },
-          } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
+          // Create FormData for the API
+          const formData = new FormData();
+          formData.append("file", file);
 
-          urls.push(publicUrl);
+          // Upload via API route
+          const response = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+
+            if (response.status === 429) {
+              // Rate limit exceeded
+              const resetTime = response.headers.get("X-RateLimit-Reset");
+              const waitTime = resetTime
+                ? Math.ceil((parseInt(resetTime) - Date.now()) / 1000)
+                : 60;
+              throw new Error(
+                `יותר מדי העלאות. אנא המתן ${waitTime} שניות לפני ניסיון נוסף.`
+              );
+            }
+
+            throw new Error(errorData.error || "שגיאה בהעלאת הקובץ");
+          }
+
+          const data = await response.json();
+          urls.push(data.url);
+
+          // Dispatch performance event
+          window.dispatchEvent(new CustomEvent("upload-success"));
 
           // Update progress
           completed++;
@@ -108,6 +151,10 @@ export const useUpload = () => {
         } catch (err) {
           console.error("Error uploading file:", err);
           setError(err instanceof Error ? err.message : "שגיאה בהעלאת הקובץ");
+
+          // Dispatch error event
+          window.dispatchEvent(new CustomEvent("upload-error"));
+
           // Continue with other files
         }
       }
@@ -138,5 +185,6 @@ export const useUpload = () => {
       videos: ALLOWED_VIDEO_TYPES,
     },
     maxFileSize: MAX_FILE_SIZE,
+    maxVideoDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
   };
 };

@@ -33,13 +33,6 @@ const Title = styled.h1`
   margin: 0;
 `;
 
-const Subtitle = styled.p`
-  color: #a0522d;
-  text-align: center;
-  font-size: 1rem;
-  margin: 0;
-`;
-
 const PrintButton = styled.button`
   background: #8b4513;
   color: white;
@@ -70,8 +63,6 @@ export default function QRPage() {
           שלנו ❤️
         </Title>
         <QRCodeSVG value={appUrl} size={300} level="H" includeMargin={true} />
-        {/* <Subtitle>או היכנסו לכתובת:</Subtitle>
-        <Subtitle style={{ direction: "ltr" }}>{appUrl}</Subtitle> */}
       </QRContainer>
       <PrintButton onClick={handlePrint}>הדפסה</PrintButton>
     </QRPageWrapper>

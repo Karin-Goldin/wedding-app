@@ -1,95 +1,102 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import styled from "styled-components";
+import Image from "next/image";
 import { useUpload } from "@/hooks/useUpload";
 import GalleryPreview from "@/components/GalleryPreview";
-import Image from "next/image";
 
 const Container = styled.div`
-  width: 100%;
-  min-height: 100vh;
-  margin: 0;
-  padding: 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  overflow: hidden;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  position: relative;
+  z-index: 1;
 `;
 
 const HeroImage = styled.div`
-  width: 100%;
-  height: 50vh;
   position: relative;
-  margin-bottom: 1rem;
-
-  img {
-    object-fit: contain !important;
-    padding: 0 10px;
-  }
+  width: 300px;
+  height: 300px;
+  margin-bottom: 2rem;
 `;
 
 const ContentWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
+  gap: 2rem;
   width: 100%;
-  max-width: 350px;
-  padding: 0;
+  max-width: 600px;
 `;
 
 const UploadSection = styled.div`
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 1rem;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.4rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 24px;
+  padding: 2rem;
+  text-align: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  position: relative;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.9);
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
   }
 `;
 
-const Title = styled.h2`
+const UploadIcon = styled.div`
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1rem;
+  background: rgba(139, 69, 19, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #8b4513;
-  font-size: 1.2rem;
+  transition: all 0.3s ease;
+
+  ${UploadSection}:hover & {
+    background: rgba(139, 69, 19, 0.2);
+    transform: scale(1.1);
+  }
+
+  svg {
+    width: 40px;
+    height: 40px;
+  }
+`;
+
+const Title = styled.h1`
+  font-size: 2rem;
   margin: 0;
-  text-align: center;
+  margin-bottom: 0.5rem;
+  color: #8b4513;
 `;
 
 const Subtitle = styled.p`
-  color: #a0522d;
-  font-size: 0.85rem;
+  font-size: 1.1rem;
   margin: 0;
-  text-align: center;
+  margin-bottom: 1rem;
+  color: #666;
 `;
 
 const IconText = styled.div`
-  color: #a0522d;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  font-size: 0.85rem;
-`;
-
-const UploadIcon = styled.div`
-  width: 40px;
-  height: 40px;
+  font-size: 1rem;
   color: #8b4513;
-  margin-bottom: 0.4rem;
+  font-weight: 500;
 
-  svg {
-    width: 100%;
-    height: 100%;
+  span {
+    font-size: 1.2rem;
   }
 `;
 

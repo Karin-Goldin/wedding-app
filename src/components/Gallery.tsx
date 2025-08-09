@@ -17,6 +17,38 @@ const GalleryContainer = styled.div`
   margin-top: 20px;
 `;
 
+const LoadMoreButton = styled.button`
+  width: 100%;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: white;
+    transform: translateY(-2px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+const LoadingSpinner = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  font-size: 1.1rem;
+  color: #666;
+`;
+
 const ImageCard = styled.div`
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
@@ -203,13 +235,17 @@ const ErrorText = styled.p`
 interface FileInfo {
   url: string;
   uploadTime: number;
+  name: string;
 }
 
 const DELETE_WINDOW_MINUTES = 5;
+const FILES_PER_PAGE = 20; // Load 20 files at a time
 
 export default function Gallery() {
   const [files, setFiles] = useState<FileInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<string | null>(null);
@@ -218,18 +254,22 @@ export default function Gallery() {
   const [passwordError, setPasswordError] = useState("");
   const [verifyingPassword, setVerifyingPassword] = useState(false);
 
-  const loadFiles = useCallback(async () => {
+  const loadFiles = useCallback(async (offset = 0, limit = FILES_PER_PAGE) => {
     try {
       const { data, error } = await supabase.storage
         .from(STORAGE_BUCKET)
-        .list();
+        .list("", {
+          limit,
+          offset,
+          sortBy: { column: "created_at", order: "desc" },
+        });
 
       if (error) {
         console.error("Error loading files:", error);
-        return;
+        return [];
       }
 
-      // Get public URLs and creation times for all files
+      // Get public URLs and creation times for files
       const filesInfo = await Promise.all(
         data.map(async (file) => {
           const {
@@ -239,17 +279,41 @@ export default function Gallery() {
           return {
             url: publicUrl,
             uploadTime: new Date(file.created_at || Date.now()).getTime(),
+            name: file.name,
           };
         })
       );
 
-      setFiles(filesInfo);
+      return filesInfo;
     } catch (error) {
       console.error("Error:", error);
-    } finally {
-      setLoading(false);
+      return [];
     }
   }, []);
+
+  const loadInitialFiles = useCallback(async () => {
+    setLoading(true);
+    const initialFiles = await loadFiles(0, FILES_PER_PAGE);
+    setFiles(initialFiles);
+    setHasMore(initialFiles.length === FILES_PER_PAGE);
+    setLoading(false);
+  }, [loadFiles]);
+
+  const loadMoreFiles = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    const moreFiles = await loadFiles(files.length, FILES_PER_PAGE);
+
+    if (moreFiles.length > 0) {
+      setFiles((prev) => [...prev, ...moreFiles]);
+      setHasMore(moreFiles.length === FILES_PER_PAGE);
+    } else {
+      setHasMore(false);
+    }
+
+    setLoadingMore(false);
+  }, [loadFiles, files.length, loadingMore, hasMore]);
 
   const canDeleteWithoutPassword = (uploadTime: number) => {
     const now = Date.now();
@@ -321,8 +385,8 @@ export default function Gallery() {
         return;
       }
 
-      // Refresh the file list
-      loadFiles();
+      // Remove from local state instead of reloading all files
+      setFiles((prev) => prev.filter((f) => f.url !== url));
       setShowPasswordDialog(false);
       setPassword("");
       setPasswordError("");
@@ -335,7 +399,7 @@ export default function Gallery() {
   };
 
   useEffect(() => {
-    loadFiles();
+    loadInitialFiles();
 
     // Enable real-time subscription for storage events
     const channel = supabase
@@ -345,7 +409,8 @@ export default function Gallery() {
       })
       .on("broadcast", { event: "storage-update" }, () => {
         console.log("Storage update received");
-        loadFiles();
+        // Only reload initial files on storage updates
+        loadInitialFiles();
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
@@ -353,25 +418,21 @@ export default function Gallery() {
         }
       });
 
-    // Also set up a periodic refresh as a backup
-    const refreshInterval = setInterval(loadFiles, 5000);
-
     return () => {
       channel.unsubscribe();
-      clearInterval(refreshInterval);
     };
-  }, [loadFiles]);
+  }, [loadInitialFiles]);
 
   const isVideo = (url: string) => {
     return /\.(mp4|mov|webm|3gp|mkv|mpeg|ogv|avi)$/i.test(url);
   };
 
   if (loading) {
-    return <div>טוען תמונות...</div>;
+    return <LoadingSpinner>טוען תמונות...</LoadingSpinner>;
   }
 
   if (files.length === 0) {
-    return null;
+    return <LoadingSpinner>אין תמונות עדיין</LoadingSpinner>;
   }
 
   return (
@@ -418,6 +479,12 @@ export default function Gallery() {
           </ImageCard>
         ))}
       </GalleryContainer>
+
+      {hasMore && (
+        <LoadMoreButton onClick={loadMoreFiles} disabled={loadingMore}>
+          {loadingMore ? "טוען עוד..." : "טען עוד תמונות"}
+        </LoadMoreButton>
+      )}
 
       {selectedMedia && (
         <MediaModal
