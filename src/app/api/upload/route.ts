@@ -59,6 +59,10 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
+    const message = formData.get("message") as string;
+
+    console.log("Upload API - Received message:", message);
+    console.log("Upload API - File name:", file?.name);
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -104,16 +108,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create unique filename
+    // Create unique filename (simple, without message)
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(7);
     const fileExt = file.name.split(".").pop();
     const fileName = `${timestamp}-${randomString}.${fileExt}`;
 
+    console.log("Upload API - Creating filename:", fileName);
+    console.log("Upload API - Message to store in database:", message);
+
     // Convert File to Buffer for server-side upload
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Upload to Supabase Storage
+    // Upload to Supabase Storage (simple, no metadata)
     const { error: uploadError, data } = await supabase.storage
       .from(STORAGE_BUCKET)
       .upload(fileName, buffer, {
@@ -130,7 +137,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get public URL
+    console.log("Upload API - Upload successful, data:", data);
+
+    // Store message in database if provided
+    if (message && message.trim()) {
+      try {
+        const { error: dbError } = await supabase.from("file_messages").insert({
+          file_name: fileName,
+          message: message.trim(),
+          uploaded_at: new Date().toISOString(),
+        });
+
+        if (dbError) {
+          console.error("Database error:", dbError);
+          // Don't fail the upload if database insert fails
+        } else {
+          console.log("Message stored in database successfully");
+        }
+      } catch (error) {
+        console.error("Error storing message in database:", error);
+      }
+    }
+
     const {
       data: { publicUrl },
     } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
@@ -141,6 +169,7 @@ export async function POST(request: NextRequest) {
         fileName,
         size: file.size,
         type: file.type,
+        message: message && message.trim() ? message.trim() : null,
       },
       {
         headers: {

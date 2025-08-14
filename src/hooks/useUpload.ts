@@ -80,7 +80,7 @@ export const useUpload = () => {
     }
   };
 
-  const uploadFiles = async (files: FileList | null) => {
+  const uploadFiles = async (files: FileList | null, message?: string) => {
     if (!files || files.length === 0) {
       setError("לא נבחרו קבצים");
       return [];
@@ -115,6 +115,15 @@ export const useUpload = () => {
           // Create FormData for the API
           const formData = new FormData();
           formData.append("file", file);
+          if (message && message.trim()) {
+            formData.append("message", message.trim());
+            console.log(
+              "Upload hook - Adding message to FormData:",
+              message.trim()
+            );
+          } else {
+            console.log("Upload hook - No message to add");
+          }
 
           // Upload via API route
           const response = await fetch("/api/upload", {

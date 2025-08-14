@@ -106,20 +106,59 @@ const FileInput = styled.input`
 
 const ProgressBar = styled.div<{ $progress: number }>`
   width: 100%;
-  height: 4px;
-  background: rgba(139, 69, 19, 0.2);
-  border-radius: 2px;
+  height: 8px;
+  background: rgba(139, 69, 19, 0.1);
+  border-radius: 4px;
   overflow: hidden;
-  margin-top: 0.4rem;
+  margin-top: 0.8rem;
+  position: relative;
+  border: 1px solid rgba(139, 69, 19, 0.2);
 
   &::after {
     content: "";
     display: block;
     width: ${(props) => props.$progress}%;
     height: 100%;
-    background: #8b4513;
-    transition: width 0.3s ease;
+    background: linear-gradient(90deg, #8b4513, #a0522d);
+    transition: width 0.4s ease;
+    border-radius: 3px;
+    box-shadow: 0 0 8px rgba(139, 69, 19, 0.3);
+    position: relative;
   }
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+    animation: shimmer 1.5s infinite;
+    z-index: 1;
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+`;
+
+const ProgressText = styled.div`
+  text-align: center;
+  font-size: 0.8rem;
+  color: #8b4513;
+  margin-top: 0.4rem;
+  font-weight: 500;
 `;
 
 const Footer = styled.footer`
@@ -138,20 +177,66 @@ const Footer = styled.footer`
   unicode-bidi: bidi-override;
 `;
 
+const MessageInput = styled.input`
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid rgba(139, 69, 19, 0.3);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  background: rgba(255, 255, 255, 0.8);
+  color: #8b4513;
+  text-align: center;
+  direction: rtl;
+
+  &::placeholder {
+    color: #a0522d;
+    opacity: 0.7;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #8b4513;
+    background: rgba(255, 255, 255, 0.9);
+  }
+`;
+
 export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [key, setKey] = useState(0);
+  const [message, setMessage] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const { uploadFiles, isUploading, progress, error } = useUpload();
 
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      setSelectedFiles(files);
+      setMessage(""); // Clear any previous message
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFiles) return;
+
     try {
-      await uploadFiles(event.target.files);
+      await uploadFiles(selectedFiles, message);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+      setSelectedFiles(null);
+      setMessage(""); // Clear message after upload
       setKey((prev) => prev + 1);
     } catch (error) {
       console.error("Upload failed:", error);
+    }
+  };
+
+  const handleCancel = () => {
+    setSelectedFiles(null);
+    setMessage("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -172,32 +257,90 @@ export default function Home() {
           />
         </HeroImage>
         <ContentWrapper>
-          <UploadSection onClick={handleClick}>
-            <FileInput
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,video/*"
-              multiple
-              onChange={handleUpload}
-              disabled={isUploading}
-            />
-            <UploadIcon>
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z" />
-              </svg>
-            </UploadIcon>
-            <Title>שתפו את הזכרונות שלכם</Title>
-            <Subtitle>העלו תמונות וסרטונים מהיום המיוחד שלנו</Subtitle>
-            <IconText>
-              <span>📸</span>
-              תמונות וסרטונים מוזמנים
-              <span>❤️</span>
-            </IconText>
-            {isUploading && <ProgressBar $progress={progress} />}
-            {error && (
-              <div style={{ color: "red", marginTop: "0.5rem" }}>{error}</div>
-            )}
-          </UploadSection>
+          {!selectedFiles ? (
+            <UploadSection onClick={handleClick}>
+              <FileInput
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                onChange={handleFileSelect}
+                disabled={isUploading}
+              />
+              <UploadIcon>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z" />
+                </svg>
+              </UploadIcon>
+              <Title>שתפו את הזכרונות שלכם</Title>
+              <Subtitle>העלו תמונות וסרטונים מהיום המיוחד שלנו</Subtitle>
+              <IconText>
+                <span>📸</span>
+                תמונות וסרטונים מוזמנים
+                <span>❤️</span>
+              </IconText>
+            </UploadSection>
+          ) : (
+            <UploadSection>
+              <Title>קבצים נבחרו</Title>
+              <Subtitle>{selectedFiles.length} קבצים מוכנים להעלאה</Subtitle>
+              <MessageInput
+                type="text"
+                placeholder="שם או הודעה (אופציונלי)"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                disabled={isUploading}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  marginTop: "1rem",
+                  justifyContent: "center",
+                }}
+              >
+                <button
+                  onClick={handleUpload}
+                  disabled={isUploading}
+                  style={{
+                    background: "#8b4513",
+                    color: "white",
+                    border: "none",
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    cursor: isUploading ? "not-allowed" : "pointer",
+                    opacity: isUploading ? 0.6 : 1,
+                  }}
+                >
+                  {isUploading ? "מעלה..." : "העלה קבצים"}
+                </button>
+                <button
+                  onClick={handleCancel}
+                  disabled={isUploading}
+                  style={{
+                    background: "transparent",
+                    color: "#8b4513",
+                    border: "1px solid #8b4513",
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    cursor: isUploading ? "not-allowed" : "pointer",
+                    opacity: isUploading ? 0.6 : 1,
+                  }}
+                >
+                  ביטול
+                </button>
+              </div>
+              {isUploading && (
+                <>
+                  <ProgressBar $progress={progress} />
+                  <ProgressText>{Math.round(progress)}% הושלם</ProgressText>
+                </>
+              )}
+              {error && (
+                <div style={{ color: "red", marginTop: "0.5rem" }}>{error}</div>
+              )}
+            </UploadSection>
+          )}
 
           <GalleryPreview key={key} />
         </ContentWrapper>

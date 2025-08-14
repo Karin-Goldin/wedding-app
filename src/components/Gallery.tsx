@@ -139,8 +139,28 @@ const DeleteButton = styled.button`
   }
 
   &:hover {
-    background: white;
+    background: rgba(255, 255, 255, 1);
+    transform: scale(1.1);
   }
+`;
+
+const MessageBadge = styled.div`
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  background: rgba(139, 69, 19, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  text-align: center;
+  backdrop-filter: blur(4px);
+  z-index: 2;
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const ConfirmDialog = styled.div`
@@ -236,6 +256,7 @@ interface FileInfo {
   url: string;
   uploadTime: number;
   name: string;
+  message?: string;
 }
 
 const DELETE_WINDOW_MINUTES = 5;
@@ -256,6 +277,7 @@ export default function Gallery() {
 
   const loadFiles = useCallback(async (offset = 0, limit = FILES_PER_PAGE) => {
     try {
+      console.log("Loading files from Supabase...");
       const { data, error } = await supabase.storage
         .from(STORAGE_BUCKET)
         .list("", {
@@ -269,6 +291,8 @@ export default function Gallery() {
         return [];
       }
 
+      console.log("Raw files data:", data);
+
       // Get public URLs and creation times for files
       const filesInfo = await Promise.all(
         data.map(async (file) => {
@@ -276,14 +300,38 @@ export default function Gallery() {
             data: { publicUrl },
           } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(file.name);
 
+          console.log("File object:", file);
+          console.log("File metadata:", file.metadata);
+          console.log("File metadata type:", typeof file.metadata);
+
+          // Get message from database
+          let message = null;
+          try {
+            const { data: messageData, error: messageError } = await supabase
+              .from("file_messages")
+              .select("message")
+              .eq("file_name", file.name)
+              .single();
+
+            if (!messageError && messageData) {
+              message = messageData.message;
+            }
+          } catch (error) {
+            console.log("No message found in database for:", file.name);
+          }
+
+          console.log("File metadata:", file.name, "Message from DB:", message);
+
           return {
             url: publicUrl,
             uploadTime: new Date(file.created_at || Date.now()).getTime(),
             name: file.name,
+            message: message,
           };
         })
       );
 
+      console.log("Processed files info:", filesInfo);
       return filesInfo;
     } catch (error) {
       console.error("Error:", error);
@@ -454,6 +502,9 @@ export default function Gallery() {
                 <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
               </svg>
             </DeleteButton>
+            <MessageBadge>
+              {fileInfo.message ? fileInfo.message : "אורח"}
+            </MessageBadge>
             <div
               onClick={() => setSelectedMedia(fileInfo.url)}
               style={{ width: "100%", height: "100%" }}
