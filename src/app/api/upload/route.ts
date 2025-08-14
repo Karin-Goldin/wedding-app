@@ -3,7 +3,7 @@ import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
 
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const MAX_UPLOADS_PER_MINUTE = 10; // Per IP
+const MAX_UPLOADS_PER_MINUTE = 50; // Per IP - generous for wedding
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 // Simple in-memory rate limiting (use Redis in production)
@@ -42,10 +42,11 @@ export async function POST(request: NextRequest) {
     // Check rate limit
     const rateLimit = getRateLimitInfo(ip);
     if (rateLimit.remaining <= 0) {
+      const waitTime = Math.ceil((rateLimit.resetTime - Date.now()) / 1000);
       return NextResponse.json(
         {
           error:
-            "Rate limit exceeded. Please wait before uploading more files.",
+            `יותר מדי העלאות. אנא המתן ${waitTime} שניות לפני ניסיון נוסף.`,
         },
         {
           status: 429,
