@@ -2,11 +2,20 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { sign } from "jsonwebtoken";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "simba158";
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export async function POST(request: Request) {
   try {
+    // Check if environment variables are set
+    if (!ADMIN_PASSWORD || !JWT_SECRET) {
+      console.error("Missing environment variables: ADMIN_PASSWORD or JWT_SECRET");
+      return NextResponse.json(
+        { error: "Server configuration error" },
+        { status: 500 }
+      );
+    }
+
     const { password } = await request.json();
 
     if (!password) {

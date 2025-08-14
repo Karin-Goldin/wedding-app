@@ -8,7 +8,7 @@ import { NextRequest } from "next/server";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const STORAGE_BUCKET = "wedding-photos";
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!supabaseUrl || !supabaseServiceRoleKey) {
   console.error("Supabase environment variables are not set.");
@@ -19,6 +19,11 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 // Middleware to check authentication
 async function checkAuth(request: Request) {
+  if (!JWT_SECRET) {
+    console.error("Missing JWT_SECRET environment variable");
+    return false;
+  }
+
   const cookieStore = await cookies();
   const token = cookieStore.get("auth-token");
 
