@@ -9,7 +9,9 @@ export async function POST(request: Request) {
   try {
     // Check if environment variables are set
     if (!ADMIN_PASSWORD || !JWT_SECRET) {
-      console.error("Missing environment variables: ADMIN_PASSWORD or JWT_SECRET");
+      console.error(
+        "Missing environment variables: ADMIN_PASSWORD or JWT_SECRET"
+      );
       return NextResponse.json(
         { error: "Server configuration error" },
         { status: 500 }
