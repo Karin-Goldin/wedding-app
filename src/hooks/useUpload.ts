@@ -66,12 +66,48 @@ export const useUpload = () => {
   const [error, setError] = useState<string | null>(null);
 
   const validateFile = (file: File) => {
-    if (
-      !ALLOWED_IMAGE_TYPES.includes(file.type) &&
-      !ALLOWED_VIDEO_TYPES.includes(file.type)
-    ) {
+    // More robust file type checking
+    const fileType = file.type.toLowerCase();
+    const fileName = file.name.toLowerCase();
+    
+    // Check if file type is in our allowed lists
+    const isAllowedType = ALLOWED_IMAGE_TYPES.includes(fileType) || ALLOWED_VIDEO_TYPES.includes(fileType);
+    
+    // If MIME type doesn't match, try to infer from file extension
+    if (!isAllowedType) {
+      const extension = fileName.split('.').pop();
+      const extensionToMimeType: { [key: string]: string[] } = {
+        'jpg': ['image/jpeg'],
+        'jpeg': ['image/jpeg'],
+        'png': ['image/png'],
+        'gif': ['image/gif'],
+        'webp': ['image/webp'],
+        'heic': ['image/heic'],
+        'heif': ['image/heif'],
+        'bmp': ['image/bmp', 'image/x-ms-bmp'],
+        'mp4': ['video/mp4'],
+        'mov': ['video/quicktime'],
+        'webm': ['video/webm'],
+        'm4v': ['video/x-m4v'],
+        '3gp': ['video/3gpp'],
+        'mkv': ['video/x-matroska'],
+        'mpg': ['video/mpeg'],
+        'mpeg': ['video/mpeg'],
+        'ogv': ['video/ogg'],
+        'avi': ['video/x-msvideo']
+      };
+      
+      const allowedMimeTypes = extensionToMimeType[extension || ''] || [];
+      if (allowedMimeTypes.length > 0) {
+        console.log(`File type mismatch: ${fileType} for ${fileName}, but extension suggests: ${allowedMimeTypes.join(', ')}`);
+        // Allow the file to proceed if extension matches
+        return;
+      }
+    }
+    
+    if (!isAllowedType) {
       throw new Error(
-        `סוג קובץ לא נתמך. הקבצים הנתמכים הם: JPEG, PNG, GIF, WEBP, HEIC/HEIF, BMP, MP4 (כולל HEVC), MOV, WEBM, 3GP, MKV, AVI`
+        `סוג קובץ לא נתמך: ${file.name} (${fileType}). הקבצים הנתמכים הם: JPEG, PNG, GIF, WEBP, HEIC/HEIF, BMP, MP4 (כולל HEVC), MOV, WEBM, 3GP, MKV, AVI`
       );
     }
 
@@ -133,6 +169,13 @@ export const useUpload = () => {
 
           if (!response.ok) {
             const errorData = await response.json();
+            console.error(`Upload failed for ${file.name}:`, {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorData,
+              fileType: file.type,
+              fileSize: file.size
+            });
 
             if (response.status === 429) {
               // Rate limit exceeded

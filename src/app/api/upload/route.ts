@@ -45,8 +45,7 @@ export async function POST(request: NextRequest) {
       const waitTime = Math.ceil((rateLimit.resetTime - Date.now()) / 1000);
       return NextResponse.json(
         {
-          error:
-            `יותר מדי העלאות. אנא המתן ${waitTime} שניות לפני ניסיון נוסף.`,
+          error: `יותר מדי העלאות. אנא המתן ${waitTime} שניות לפני ניסיון נוסף.`,
         },
         {
           status: 429,
@@ -62,8 +61,10 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File;
     const message = formData.get("message") as string;
 
-    console.log("Upload API - Received message:", message);
     console.log("Upload API - File name:", file?.name);
+    console.log("Upload API - File type:", file?.type);
+    console.log("Upload API - File size:", file?.size);
+    console.log("Upload API - Message:", message);
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -102,9 +103,49 @@ export async function POST(request: NextRequest) {
       "video/x-msvideo",
     ];
 
-    if (!allowedTypes.includes(file.type)) {
+    // More robust file type validation
+    const fileType = file.type.toLowerCase();
+    const originalFileName = file.name.toLowerCase();
+    
+    // Check if file type is in our allowed list
+    let isAllowedType = allowedTypes.includes(fileType);
+    
+    // If MIME type doesn't match, try to infer from file extension
+    if (!isAllowedType) {
+      const extension = originalFileName.split('.').pop();
+      const extensionToMimeType: { [key: string]: string[] } = {
+        'jpg': ['image/jpeg'],
+        'jpeg': ['image/jpeg'],
+        'png': ['image/png'],
+        'gif': ['image/gif'],
+        'webp': ['image/webp'],
+        'heic': ['image/heic'],
+        'heif': ['image/heif'],
+        'bmp': ['image/bmp', 'image/x-ms-bmp'],
+        'mp4': ['video/mp4'],
+        'mov': ['video/quicktime'],
+        'webm': ['video/webm'],
+        'm4v': ['video/x-m4v'],
+        '3gp': ['video/3gpp'],
+        'mkv': ['video/x-matroska'],
+        'mpg': ['video/mpeg'],
+        'mpeg': ['video/mpeg'],
+        'ogv': ['video/ogg'],
+        'avi': ['video/x-msvideo']
+      };
+      
+      const allowedMimeTypes = extensionToMimeType[extension || ''] || [];
+      if (allowedMimeTypes.length > 0) {
+        console.log(`Server: File type mismatch: ${fileType} for ${originalFileName}, but extension suggests: ${allowedMimeTypes.join(', ')}`);
+        // Allow the file to proceed if extension matches
+        isAllowedType = true;
+      }
+    }
+
+    if (!isAllowedType) {
+      console.error(`Server: Unsupported file type: ${fileType} for file: ${originalFileName}`);
       return NextResponse.json(
-        { error: "File type not supported" },
+        { error: `File type not supported: ${originalFileName} (${fileType})` },
         { status: 400 }
       );
     }
