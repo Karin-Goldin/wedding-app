@@ -16,6 +16,11 @@ const ALLOWED_IMAGE_TYPES = [
   // Android specific
   "image/x-ms-bmp",
   "image/bmp",
+  // Additional formats
+  "image/tiff",
+  "image/tif",
+  "image/svg+xml",
+  "image/avif",
 ];
 
 const ALLOWED_VIDEO_TYPES = [
@@ -32,6 +37,12 @@ const ALLOWED_VIDEO_TYPES = [
   "video/mpeg", // .mpg, .mpeg
   "video/ogg", // .ogv
   "video/x-msvideo", // .avi
+  // Additional formats
+  "video/x-flv", // Flash video
+  "video/x-ms-wmv", // Windows Media
+  "video/x-ms-asf", // Advanced Systems Format
+  "video/3gpp2", // .3g2
+  "video/x-matroska-3d", // 3D MKV
 ];
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -85,16 +96,24 @@ export const useUpload = () => {
         'heic': ['image/heic'],
         'heif': ['image/heif'],
         'bmp': ['image/bmp', 'image/x-ms-bmp'],
+        'tiff': ['image/tiff'],
+        'tif': ['image/tiff'],
+        'svg': ['image/svg+xml'],
+        'avif': ['image/avif'],
         'mp4': ['video/mp4'],
         'mov': ['video/quicktime'],
         'webm': ['video/webm'],
         'm4v': ['video/x-m4v'],
         '3gp': ['video/3gpp'],
+        '3g2': ['video/3gpp2'],
         'mkv': ['video/x-matroska'],
         'mpg': ['video/mpeg'],
         'mpeg': ['video/mpeg'],
         'ogv': ['video/ogg'],
-        'avi': ['video/x-msvideo']
+        'avi': ['video/x-msvideo'],
+        'flv': ['video/x-flv'],
+        'wmv': ['video/x-ms-wmv'],
+        'asf': ['video/x-ms-asf']
       };
       
       const allowedMimeTypes = extensionToMimeType[extension || ''] || [];
@@ -107,7 +126,7 @@ export const useUpload = () => {
     
     if (!isAllowedType) {
       throw new Error(
-        `סוג קובץ לא נתמך: ${file.name} (${fileType}). הקבצים הנתמכים הם: JPEG, PNG, GIF, WEBP, HEIC/HEIF, BMP, MP4 (כולל HEVC), MOV, WEBM, 3GP, MKV, AVI`
+        `סוג קובץ לא נתמך: ${file.name} (${fileType}). הקבצים הנתמכים הם: JPEG, PNG, GIF, WEBP, HEIC/HEIF, BMP, TIFF, SVG, AVIF, MP4 (כולל HEVC), MOV, WEBM, 3GP, MKV, AVI, WMV, FLV`
       );
     }
 

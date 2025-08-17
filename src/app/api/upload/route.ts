@@ -89,6 +89,10 @@ export async function POST(request: NextRequest) {
       "image/heif",
       "image/x-ms-bmp",
       "image/bmp",
+      "image/tiff",
+      "image/tif",
+      "image/svg+xml",
+      "image/avif",
       "video/mp4",
       "video/quicktime",
       "video/webm",
@@ -97,10 +101,15 @@ export async function POST(request: NextRequest) {
       "video/h265",
       "video/x-h265",
       "video/3gpp",
+      "video/3gpp2",
       "video/x-matroska",
+      "video/x-matroska-3d",
       "video/mpeg",
       "video/ogg",
       "video/x-msvideo",
+      "video/x-flv",
+      "video/x-ms-wmv",
+      "video/x-ms-asf",
     ];
 
     // More robust file type validation
@@ -122,16 +131,24 @@ export async function POST(request: NextRequest) {
         'heic': ['image/heic'],
         'heif': ['image/heif'],
         'bmp': ['image/bmp', 'image/x-ms-bmp'],
+        'tiff': ['image/tiff'],
+        'tif': ['image/tiff'],
+        'svg': ['image/svg+xml'],
+        'avif': ['image/avif'],
         'mp4': ['video/mp4'],
         'mov': ['video/quicktime'],
         'webm': ['video/webm'],
         'm4v': ['video/x-m4v'],
         '3gp': ['video/3gpp'],
+        '3g2': ['video/3gpp2'],
         'mkv': ['video/x-matroska'],
         'mpg': ['video/mpeg'],
         'mpeg': ['video/mpeg'],
         'ogv': ['video/ogg'],
-        'avi': ['video/x-msvideo']
+        'avi': ['video/x-msvideo'],
+        'flv': ['video/x-flv'],
+        'wmv': ['video/x-ms-wmv'],
+        'asf': ['video/x-ms-asf']
       };
       
       const allowedMimeTypes = extensionToMimeType[extension || ''] || [];
