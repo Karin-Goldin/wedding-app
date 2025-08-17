@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
 
 // Define allowed file types
 const ALLOWED_IMAGE_TYPES = [
@@ -126,7 +127,7 @@ export const useUpload = () => {
     
     if (!isAllowedType) {
       throw new Error(
-        `סוג קובץ לא נתמך: ${file.name} (${fileType}). הקבצים הנתמכים הם: JPEG, PNG, GIF, WEBP, HEIC/HEIF, BMP, TIFF, SVG, AVIF, MP4 (כולל HEVC), MOV, WEBM, 3GP, MKV, AVI, WMV, FLV`
+        `סוג קובץ לא נתמך: ${file.name} (${fileType}). הקבצים הנתמכים הם: JPEG, PNG, GIF, WEBP, HEIC/HEIF, BMP, TIFF, SVG, AVIF, MP4 (כולל HEVC), MOV, WEBM, 3GP, MKV, AVI, WMV, FLV. קבצים גדולים (מעל 10MB) יועלו ישירות.`
       );
     }
 
@@ -180,38 +181,92 @@ export const useUpload = () => {
             console.log("Upload hook - No message to add");
           }
 
-          // Upload via API route
-          const response = await fetch("/api/upload", {
-            method: "POST",
-            body: formData,
-          });
+          // Check if file is large (>10MB) - use direct Supabase upload
+          const isLargeFile = file.size > 10 * 1024 * 1024; // 10MB
+          
+          if (isLargeFile) {
+            console.log("Upload hook - Large file detected, using direct Supabase upload");
+            
+            // Direct Supabase upload for large files
+            const timestamp = Date.now();
+            const randomString = Math.random().toString(36).substring(7);
+            const fileExt = file.name.split(".").pop();
+            const fileName = `${timestamp}-${randomString}.${fileExt}`;
+            
+            const { error: uploadError, data } = await supabase.storage
+              .from(STORAGE_BUCKET)
+              .upload(fileName, file, {
+                cacheControl: "3600",
+                upsert: false,
+                contentType: file.type,
+              });
 
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.error(`Upload failed for ${file.name}:`, {
-              status: response.status,
-              statusText: response.statusText,
-              error: errorData,
-              fileType: file.type,
-              fileSize: file.size
-            });
-
-            if (response.status === 429) {
-              // Rate limit exceeded
-              const resetTime = response.headers.get("X-RateLimit-Reset");
-              const waitTime = resetTime
-                ? Math.ceil((parseInt(resetTime) - Date.now()) / 1000)
-                : 60;
-              throw new Error(
-                `יותר מדי העלאות. אנא המתן ${waitTime} שניות לפני ניסיון נוסף.`
-              );
+            if (uploadError) {
+              console.error("Direct upload error:", uploadError);
+              throw new Error(`Upload failed: ${uploadError.message}`);
             }
 
-            throw new Error(errorData.error || "שגיאה בהעלאת הקובץ");
-          }
+            // Store message in database if provided
+            if (message && message.trim()) {
+              try {
+                const { error: dbError } = await supabase.from("file_messages").insert({
+                  file_name: fileName,
+                  message: message.trim(),
+                  uploaded_at: new Date().toISOString(),
+                });
 
-          const data = await response.json();
-          urls.push(data.url);
+                if (dbError) {
+                  console.error("Database error:", dbError);
+                } else {
+                  console.log("Message stored in database successfully");
+                }
+              } catch (error) {
+                console.error("Error storing message in database:", error);
+              }
+            }
+
+            const { data: { publicUrl } } = supabase.storage
+              .from(STORAGE_BUCKET)
+              .getPublicUrl(fileName);
+
+            urls.push(publicUrl);
+          } else {
+            // Use API route for smaller files
+            console.log("Upload hook - Small file, using API route");
+            
+            // Upload via API route
+            const response = await fetch("/api/upload", {
+              method: "POST",
+              body: formData,
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              console.error(`Upload failed for ${file.name}:`, {
+                status: response.status,
+                statusText: response.statusText,
+                error: errorData,
+                fileType: file.type,
+                fileSize: file.size
+              });
+
+              if (response.status === 429) {
+                // Rate limit exceeded
+                const resetTime = response.headers.get("X-RateLimit-Reset");
+                const waitTime = resetTime
+                  ? Math.ceil((parseInt(resetTime) - Date.now()) / 1000)
+                  : 60;
+                throw new Error(
+                  `יותר מדי העלאות. אנא המתן ${waitTime} שניות לפני ניסיון נוסף.`
+                );
+              }
+
+              throw new Error(errorData.error || "שגיאה בהעלאת הקובץ");
+            }
+
+            const data = await response.json();
+            urls.push(data.url);
+          }
 
           // Dispatch performance event
           window.dispatchEvent(new CustomEvent("upload-success"));
