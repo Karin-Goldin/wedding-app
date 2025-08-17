@@ -70,6 +70,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    // Additional validation for MOV files
+    if (file.type === "video/quicktime" || file.name.toLowerCase().endsWith('.mov')) {
+      console.log("Upload API - Processing MOV file:", {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        sizeInMB: (file.size / (1024 * 1024)).toFixed(2)
+      });
+    }
+
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
@@ -177,9 +187,12 @@ export async function POST(request: NextRequest) {
     console.log("Upload API - Message to store in database:", message);
 
     // Convert File to Buffer for server-side upload
+    console.log("Upload API - Converting file to buffer...");
     const buffer = Buffer.from(await file.arrayBuffer());
+    console.log("Upload API - Buffer created, size:", buffer.length);
 
     // Upload to Supabase Storage (simple, no metadata)
+    console.log("Upload API - Starting Supabase upload...");
     const { error: uploadError, data } = await supabase.storage
       .from(STORAGE_BUCKET)
       .upload(fileName, buffer, {
@@ -190,8 +203,13 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       console.error("Upload error:", uploadError);
+      console.error("Upload error details:", {
+        message: uploadError.message,
+        name: uploadError.name,
+        stack: uploadError.stack
+      });
       return NextResponse.json(
-        { error: "Failed to upload file" },
+        { error: `Failed to upload file: ${uploadError.message}` },
         { status: 500 }
       );
     }
@@ -239,8 +257,16 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("Upload API error:", error);
+    console.error("Upload API error details:", {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
+    // Return a more specific error message
+    const errorMessage = error instanceof Error ? error.message : "Unknown server error";
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: `Upload failed: ${errorMessage}` },
       { status: 500 }
     );
   }
